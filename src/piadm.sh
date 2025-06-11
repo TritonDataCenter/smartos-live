@@ -206,8 +206,8 @@ PIADM_CONF=/var/piadm/piadm.conf
 #   	 or the literal string "latest".
 #
 # Environment Variables:
-#   PIADM_NO_CHECKSUM     - If set to 1, skips checksum validation.
-#   PIADM_CHECKSUM_URL    - If set, overrides the default md5sums.txt URL
+#   PIADM_NO_SUM     - If set to 1, skips checksum validation.
+#   PIADM_SUM_URL    - If set, overrides the default md5sums.txt URL
 #   					  and uses the value provided.
 #
 # Notes:
@@ -238,10 +238,10 @@ fetch_csum() {
 			fi
 			platform_file="smartos-${stamp}.iso"
 		fi
-		if [[ -z ${PIADM_CHECKSUM_URL} ]];then
+		if [[ -z ${PIADM_SUM_URL} ]];then
 			local csum_url="${URL_PREFIX}${stamp}/md5sums.txt"
 		else
-			local csum_url="${PIADM_CHECKSUM_URL}"
+			local csum_url="${PIADM_SUM_URL}"
 		fi
 		csum_platform=$("${CURL[@]}"  "${csum_url}" |\
 			awk -v pattern="${platform_file}"\
@@ -271,7 +271,7 @@ fetch_csum() {
 # Environment variable PIADM_DIGEST_ALGORITHM controls the checksum 
 # algorithm used by DIGEST(1), by default md5 is used.  
 validate_csum() {
-	if [[ $PIADM_NO_CHECKSUM -eq 1 ]]; then
+	if [[ $PIADM_NO_SUM -eq 1 ]]; then
 		vecho "WARNING: Not validating checksum"
 		return 0
 	fi
@@ -454,9 +454,11 @@ install() {
 			err "validate_csum exit code  $code"
 		fi
 		mount -F hsfs "${tdir}/smartos.iso" "${tdir}/mnt"
-
-		# For now, assume boot stamp and PI stamp are the same on an ISO...
-		stamp=$(cat "${tdir}/mnt/etc/version/boot")
+		# if user disabled checksums, we don't have a stamp.
+		if [[ -z "${stamp}" ]]; then
+			# For now, assume boot stamp and PI stamp are the same on an ISO...
+			stamp=$(cat "${tdir}/mnt/etc/version/boot")
+		fi
 	elif [[ "$1" == "media" ]]; then
 		# Scan the available media to find what we seek.  Same advice
 		# about making sure it's the current one.
@@ -466,9 +468,12 @@ install() {
 			err "Cannot find install media"
 		fi
 
-		# For now, assume boot stamp and PI stamp are the same on
-		# install media.
-		stamp=$(cat "${tdir}/mnt/etc/version/boot")
+		# if user disabled checksums, we don't have a stamp.
+		if [[ -z "${stamp}" ]]; then
+			# For now, assume boot stamp and PI stamp are the same on
+			# install media.
+			stamp=$(cat "${tdir}/mnt/etc/version/boot")
+		fi
 	elif [[ -f $1 ]]; then
 		# File input!  Check for what kind, etc. etc.
 
@@ -479,7 +484,10 @@ install() {
 			vecho "Treating $1 as an ISO file."
 			iso=yes
 			mount -F hsfs "$1" "${tdir}/mnt"
-			stamp=$(cat "${tdir}/mnt/etc/version/boot")
+			# if user disabled checksums, we don't have a stamp.
+			if [[ -z "${stamp}" ]]; then
+				stamp=$(cat "${tdir}/mnt/etc/version/boot")
+			fi
 		elif [[ "$filetype" == "gzip" ]]; then
 			# SmartOS PI.  Let's confirm it's actually a .tgz...
 
@@ -494,7 +502,10 @@ install() {
 			gtar -xzf "$1" -C "${tdir}/mnt"
 			mv "${tdir}"/mnt/platform-* "${tdir}/mnt/platform"
 			iso=no
-			stamp=$(cat "${tdir}/mnt/platform/etc/version/platform")
+			# if user disabled checksums, we don't have a stamp.
+			if [[ -z "${stamp}" ]]; then
+				stamp=$(cat "${tdir}/mnt/platform/etc/version/platform")
+			fi
 		else
 			/bin/rm -rf "${tdir:?}"
 			err "Unknown file type for $1"

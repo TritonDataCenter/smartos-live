@@ -207,8 +207,8 @@ PIADM_CONF=/var/piadm/piadm.conf
 #
 # Environment Variables:
 #   PIADM_NO_SUM     - If set to 1, skips checksum validation.
-#   PIADM_SUM_URL    - If set, overrides the default md5sums.txt URL
-#   					  and uses the value provided.
+#   PIADM_SUM_URL    - If set, overrides the default URL used
+#                      the checksum file used for platform images.  
 #
 # Notes:
 #   - If "latest" is used, up to 1024 PIs will be listed from ${URL_PREFIX}.

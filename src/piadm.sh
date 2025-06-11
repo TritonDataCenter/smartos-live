@@ -196,7 +196,7 @@ DEFAULT_URL_PREFIX=https://us-central.manta.mnx.io/Joyent_Dev/public/SmartOS/
 # Default path for piadm's configuration
 PIADM_CONF=/var/piadm/piadm.conf
 
-# fetch_checksum
+# fetch_csum
 #
 # Fetches a MD5 hash using a platform file as the key.
 #
@@ -216,19 +216,20 @@ PIADM_CONF=/var/piadm/piadm.conf
 #   - On error, this function exits with code 1, following PIADM(8)
 #     convention: the error indicates a failure, but no changes were made
 #     to the system.
-checksum_platform=""
-fetch_checksum() {
-	if [[ -z "$checksum_platform" ]]; then
+declare csum_platform=""
+declare stamp=""
+fetch_csum() {
+	if [[ -z "$csum_platform" ]]; then
 		local platform_file
-		local stamp
 		if [ "$1" != "latest" ]; then
-			IFS=' ' read -r stamp platform_file <<<\
-			$(echo "$1" | rev | cut -d'/' -f1,2 | rev | tr -s "/" " ")
+			IFS='/' read -ra array <<< "$1"
+			platform_file="${array[-1]}"
+			stamp="${array[-2]}"
 		else
 			#latest is a special case, we need find out stamp
 			stamps_url="${URL_PREFIX%/}?limit=1024"
 			stamp=$("${CURL[@]}" "${stamps_url}" |\
-			json -ga -c "this.name.match(/Z$/)" | json -ag name |\
+				json -ga -c "this.name.match(/Z$/)" | json -ag name |\
 				sort  | tail -1; exit ${PIPESTATUS[0]})
 			code=$?
 			if [[ $code -ne 0 ]]; then
@@ -238,28 +239,28 @@ fetch_checksum() {
 			platform_file="smartos-${stamp}.iso"
 		fi
 		if [[ -z ${PIADM_CHECKSUM_URL} ]];then
-			local checksum_url="${URL_PREFIX}${stamp}/md5sums.txt"
+			local csum_url="${URL_PREFIX}${stamp}/md5sums.txt"
 		else
-			local checksum_url="${PIADM_CHECKSUM_URL}"
+			local csum_url="${PIADM_CHECKSUM_URL}"
 		fi
-		checksum_platform=$("${CURL[@]}"  "${checksum_url}" |\
+		csum_platform=$("${CURL[@]}"  "${csum_url}" |\
 			awk -v pattern="${platform_file}"\
 			'$0 ~ pattern { print $1; exit}'; exit ${PIPESTATUS[0]})
 		code=$?
 		if [[ $code -ne 0 ]]; then
-			eecho "fetching checksums from ${checksum_url}"
+			eecho "fetching checksums from ${csum_url}"
 			return 1
 		fi
-		echo ${checksum_platform}
+		echo ${csum_platform}
 		return 0
 	else
 		eecho "not recalculating checksum for $1" &>2
-		echo ${checksum_platform}
+		echo ${csum_platform}
 		return 0
 	fi
 }
 
-# validate_checksum
+# validate_csum
 #
 # $1 is the URL from where the PI was downloaded.
 # $2 is the on disk PI image that was download from $1.
@@ -268,25 +269,25 @@ fetch_checksum() {
 # a return code of 1 means: an error has occurred, but no change was made.
 # Environment variable PIADM_DIGEST_ALGORITHM controls the checksum 
 # algorithm used by DIGEST(1), by default md5 is used.  
-validate_checksum() {
+validate_csum() {
 	if [[ $PIADM_NO_CHECKSUM -eq 1 ]]; then
-		vecho "WARNING: Not validation checksum"
+		vecho "WARNING: Not validating checksum"
 		return 0
 	fi
-	published_md5sum=$(fetch_checksum "$1")
+	published_csum=$(fetch_csum "$1")
 	code=$?
 	if [[ $code -ne 0 ]]; then
 		eecho "Could not get checksum for PI code: ${code}"
 		return 1
 	fi
-	local_md5sum=$(digest -a "${PIADM_DIGEST_ALGORITHM-md5}" "${2}")
+	local_csum=$(digest -a "${PIADM_DIGEST_ALGORITHM-md5}" "${2}")
 	code=$?
 	if [[ $code -ne 0 ]]; then
 		eecho "checksum failed for $2, algorithm used: ${PIADM_DIGEST_ALGORITHM}"
 		return 1
 	fi
-	if [[ "${published_md5sum}" != "${local_md5sum}" ]]; then
-		vecho "published_checksum: ${published_md5sum}"
+	if [[ "${published_csum}" != "${local_csum}" ]]; then
+		vecho "published_checksum: ${published_csum}"
 		vecho "local_checksum:     ${local_md5sum}"
 		eecho  "local file does not matches published checksum"
 		return 1
@@ -445,11 +446,11 @@ install() {
 			/bin/rm -rf "${tdir}"
 			fatal "Curl exit code $code"
 		fi
-		validate_checksum $1 "${tdir}/smartos.iso"
+		validate_csum $1 "${tdir}/smartos.iso"
 		code=$?
 		if [[ $code -ne 0 ]]; then
 			/bin/rm -rf "${tdir}"
-			err "validate_checksum exit code  $code"
+			err "validate_csum exit code  $code"
 		fi
 		mount -F hsfs "${tdir}/smartos.iso" "${tdir}/mnt"
 
@@ -508,10 +509,10 @@ install() {
 			dload=$(mktemp)
 			mv -f "${tdir}/download" "$dload"
 			/bin/rm -rf "${tdir}"
-			validate_checksum  "$1" "$dload"
+			validate_csum  "$1" "$dload"
 			code=$?
 			if [[ $code -ne 0 ]]; then
-				err "validate_checksum exit code  $code"
+				err "validate_csum exit code  $code"
 			fi
 			# in case `install` exits out early...
 			( pwait $$ ; rm -f "$dload" ) &
@@ -546,11 +547,11 @@ install() {
 			/bin/rm -rf "${tdir}"
 			fatal "PI-stamp $1 -- curl exit code $code"
 		fi
-		validate_checksum "${URL_PREFIX}/$1/smartos-${1}.iso" "${tdir}/smartos.iso"
+		validate_csum "${URL_PREFIX}/$1/smartos-${1}.iso" "${tdir}/smartos.iso"
  		code=$?
 		if [[ $code -ne 0 ]]; then
 			/bin/rm -rf "${tdir}"
-			err "validate_checksum exit code  $code"
+			err "validate_csum exit code  $code"
 		fi
 		mount -F hsfs "${tdir}/smartos.iso" "${tdir}/mnt"
 		code=$?

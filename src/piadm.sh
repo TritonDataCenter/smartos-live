@@ -272,7 +272,7 @@ fetch_csum() {
 # algorithm used by DIGEST(1), by default md5 is used.  
 validate_csum() {
 	if [[ $PIADM_NO_SUM -eq 1 ]]; then
-		vecho "WARNING: Not validating checksum"
+		vecho "WARNING: Not using validation checksum"
 		return 0
 	fi
 	published_csum=$(fetch_csum "$1")

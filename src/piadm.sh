@@ -198,7 +198,7 @@ PIADM_CONF=/var/piadm/piadm.conf
 
 # fetch_csum
 #
-# Fetches a MD5 hash using a platform file as the key.
+# Fetches checksums using a platform file as the key.
 #
 # Arguments:
 #   $1 - URL from where to fetch the PI from. The name of the PI
@@ -230,7 +230,7 @@ fetch_csum() {
 			stamps_url="${URL_PREFIX%/}?limit=1024"
 			stamp=$("${CURL[@]}" "${stamps_url}" |\
 				json -ga -c "this.name.match(/Z$/)" | json -ag name |\
-				sort  | tail -1; exit ${PIPESTATUS[0]})
+				sort  | tail -1; exit "${PIPESTATUS[0]}")
 			code=$?
 			if [[ $code -ne 0 ]]; then
 				eecho "Curl failed fetching PI data from ${stamps_url}"
@@ -245,17 +245,18 @@ fetch_csum() {
 		fi
 		csum_platform=$("${CURL[@]}"  "${csum_url}" |\
 			awk -v pattern="${platform_file}"\
-			'$0 ~ pattern { print $1; exit}'; exit ${PIPESTATUS[0]})
+			'$0 ~ pattern { print $1; exit}'; exit "${PIPESTATUS[0]}")
 		code=$?
 		if [[ $code -ne 0 ]]; then
 			eecho "fetching checksums from ${csum_url}"
+			#force re-calculation of checksum on the next call.
+			csum_platform=""
 			return 1
 		fi
-		echo ${csum_platform}
+		echo "${csum_platform}"
 		return 0
 	else
-		eecho "not recalculating checksum for $1" &>2
-		echo ${csum_platform}
+		echo "${csum_platform}"
 		return 0
 	fi
 }
@@ -446,7 +447,7 @@ install() {
 			/bin/rm -rf "${tdir}"
 			fatal "Curl exit code $code"
 		fi
-		validate_csum $1 "${tdir}/smartos.iso"
+		validate_csum "$1" "${tdir}/smartos.iso"
 		code=$?
 		if [[ $code -ne 0 ]]; then
 			/bin/rm -rf "${tdir}"

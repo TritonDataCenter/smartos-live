@@ -290,7 +290,7 @@ validate_csum() {
 	if [[ "${published_csum}" != "${local_csum}" ]]; then
 		vecho "published_checksum: ${published_csum}"
 		vecho "local_checksum:     ${local_csum}"
-		eecho  "local file does not matches published checksum"
+		eecho  "local file does not match published checksum"
 		return 1
 	fi
 	return 0

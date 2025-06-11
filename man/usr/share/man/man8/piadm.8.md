@@ -328,7 +328,7 @@ piadm(8) -- Manage SmartOS Platform Images
 
 ## ENVIRONMENT VARIABLES
 
-    The following environment variables affect the execution of PIADM(8).
+    The following environment variables affect piadm(8) downloads internally.
 
     PIADM_CHECKSUM_URL      If set, the value will be used to retrieve the md5sums.txt file, which will
                             used to validate the checksum of downloaded platform images.

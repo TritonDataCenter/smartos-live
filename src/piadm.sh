@@ -270,7 +270,7 @@ fetch_csum() {
 # Error code will always be 1, following the PIADM(8) convention where
 # a return code of 1 means: an error has occurred, but no change was made.
 # Environment variable PIADM_DIGEST_ALGORITHM controls the checksum
-# algorithm used by DIGEST(1), by default md5 is used.  
+# algorithm used by digest(1), by default md5 is used.  
 validate_csum() {
 	if [[ $PIADM_NO_SUM -eq 1 ]]; then
 		vecho "WARNING: Not using validation checksum"

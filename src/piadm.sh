@@ -239,7 +239,7 @@ fetch_csum() {
 			platform_file="smartos-${stamp}.iso"
 		fi
 		if [[ -z ${PIADM_SUM_URL} ]];then
-			local csum_url="${URL_PREFIX}${stamp}/md5sums.txt"
+			local csum_url="${URL_PREFIX}${stamp}/${PIADM_DIGEST_ALGORITHM-md5}sums.txt"
 		else
 			local csum_url="${PIADM_SUM_URL}"
 		fi
@@ -251,6 +251,7 @@ fetch_csum() {
 			eecho "fetching checksums from ${csum_url}"
 			#force re-calculation of checksum on the next call.
 			csum_platform=""
+			stamp=""
 			return 1
 		fi
 		echo "${csum_platform}"
@@ -278,7 +279,7 @@ validate_csum() {
 	published_csum=$(fetch_csum "$1")
 	code=$?
 	if [[ $code -ne 0 ]]; then
-		eecho "Could not get checksum for PI code: ${code}"
+		eecho "Could not get checksum for PI exit code: ${code}"
 		return 1
 	fi
 	local_csum=$(digest -a "${PIADM_DIGEST_ALGORITHM-md5}" "${2}")
@@ -521,11 +522,6 @@ install() {
 			dload=$(mktemp)
 			mv -f "${tdir}/download" "$dload"
 			/bin/rm -rf "${tdir}"
-			validate_csum  "$1" "$dload"
-			code=$?
-			if [[ $code -ne 0 ]]; then
-				err "validate_csum exit code  $code"
-			fi
 			# in case `install` exits out early...
 			( pwait $$ ; rm -f "$dload" ) &
 			vecho "Installing $1"

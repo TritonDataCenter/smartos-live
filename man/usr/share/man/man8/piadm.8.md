@@ -337,7 +337,7 @@ piadm(8) -- Manage SmartOS Platform Images
     PIADM_NO_SUM       If set to 1, this will skip checksum validation for downloaded platform
                             images.
 
-    PIADM_DIGEST_ALGORITHM  If set, the value will be used by DIGEST(1) to calculate the checksums
+    PIADM_DIGEST_ALGORITHM  If set, the value will be used by digest(1) to calculate the checksums
                             for downloaded platform images. By default md5 is used.
 
 ## EXIT STATUS

@@ -239,7 +239,7 @@ fetch_csum() {
 			platform_file="smartos-${stamp}.iso"
 		fi
 		if [[ -z ${PIADM_SUM_URL} ]];then
-			local csum_url="${URL_PREFIX}${stamp}/${PIADM_DIGEST_ALGORITHM-md5}sums.txt"
+			local csum_url="${URL_PREFIX}${stamp}/${PIADM_DIGEST_ALGORITHM:-md5}sums.txt"
 		else
 			local csum_url="${PIADM_SUM_URL}"
 		fi
@@ -282,7 +282,7 @@ validate_csum() {
 		eecho "Could not get checksum for PI exit code: ${code}"
 		return 1
 	fi
-	local_csum=$(digest -a "${PIADM_DIGEST_ALGORITHM-md5}" "${2}")
+	local_csum=$(digest -a "${PIADM_DIGEST_ALGORITHM:-md5}" "${2}")
 	code=$?
 	if [[ $code -ne 0 ]]; then
 		eecho "checksum failed for $2, algorithm used: ${PIADM_DIGEST_ALGORITHM}"

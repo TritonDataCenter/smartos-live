@@ -179,7 +179,7 @@ piname_present_get_bootfs() {
 # Defined as a variable in case we need to add parameters (like -s) to it.
 # WARNING:  Including -k for now.
 CURL=( curl -ks -f )
-VCURL=( curl -k -f --progress-bar )
+VCURL=( curl -k -f --progress-bar --show-error)
 
 vcurl() {
 	if [[ $VERBOSE -eq 1 ]]; then
@@ -254,12 +254,9 @@ fetch_csum() {
 			stamp=""
 			return 1
 		fi
-		echo "${csum_platform}"
-		return 0
-	else
-		echo "${csum_platform}"
-		return 0
 	fi
+	echo "${csum_platform}"
+	return 0
 }
 
 # validate_csum
@@ -267,7 +264,7 @@ fetch_csum() {
 # $1 is the URL from where the PI was downloaded.
 # $2 is the on disk PI image that was download from $1.
 #
-# Error code will always be 1, following the PIADM(8) convention where
+# Error code will always be 1, following the piadm(8) convention where
 # a return code of 1 means: an error has occurred, but no change was made.
 # Environment variable PIADM_DIGEST_ALGORITHM controls the checksum
 # algorithm used by digest(1), by default md5 is used.  
@@ -288,9 +285,9 @@ validate_csum() {
 		eecho "checksum failed for $2, algorithm used: ${PIADM_DIGEST_ALGORITHM}"
 		return 1
 	fi
+	vecho "published_checksum: ${published_csum}"
+	vecho "local_checksum:     ${local_csum}"
 	if [[ "${published_csum}" != "${local_csum}" ]]; then
-		vecho "published_checksum: ${published_csum}"
-		vecho "local_checksum:     ${local_csum}"
 		eecho  "local file does not match published checksum"
 		return 1
 	fi
@@ -452,7 +449,7 @@ install() {
 		code=$?
 		if [[ $code -ne 0 ]]; then
 			/bin/rm -rf "${tdir}"
-			err "validate_csum exit code  $code"
+			err "Cannot validate checksum for $1"
 		fi
 		mount -F hsfs "${tdir}/smartos.iso" "${tdir}/mnt"
 		# if user disabled checksums, we don't have a stamp.
@@ -514,20 +511,29 @@ install() {
 	else
 		# Explicit boot stamp or URL.
 
-		# Do a URL reality check.
-		vecho "Attempting download of URL $1"
-		vcurl -o "${tdir}/download" "$1"
-		if [[ -e ${tdir}/download ]]; then
-			# Recurse with the downloaded file.
-			dload=$(mktemp)
-			mv -f "${tdir}/download" "$dload"
-			/bin/rm -rf "${tdir}"
-			# in case `install` exits out early...
-			( pwait $$ ; rm -f "$dload" ) &
-			vecho "Installing $1"
-			vecho "	   (downloaded to $dload)"
-			install "$dload" "$2"
-			return 0
+		# Check if URL exists first
+		vecho "Checking if URL $1 exists"
+		if ! "${CURL[@]}" --max-time 30 --connect-timeout \
+				10 --head "$1" > /dev/null 2>&1; then
+			vecho "URL $1 is not accessible or does not exist"
+			# Fall through to treat as boot stamp
+		else
+			vecho "Downloading from URL $1"
+			if vcurl -o "${tdir}/download" "$1"; then
+				# Recurse with the downloaded file.
+				dload=$(mktemp)
+				mv -f "${tdir}/download" "$dload"
+				/bin/rm -rf "${tdir}"
+				# in case `install` exits out early...
+				( pwait $$ ; rm -f "$dload" ) &
+				vecho "Installing $1"
+				vecho "	   (downloaded to $dload)"
+				install "$dload" "$2"
+				return 0
+			else
+				vecho "Failed to download from URL $1"
+				# Fall through to treat as boot stamp
+			fi
 		fi
 		# Else we treat it like a boot stamp.
 

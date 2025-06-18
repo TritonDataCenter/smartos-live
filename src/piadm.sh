@@ -178,8 +178,8 @@ piname_present_get_bootfs() {
 
 # Defined as a variable in case we need to add parameters (like -s) to it.
 # WARNING:  Including -k for now.
-CURL=( curl -ks -f )
-VCURL=( curl -k -f --progress-bar --show-error)
+CURL=( curl -ks -f --show-error)
+VCURL=( curl -k -f --progress-bar)
 
 vcurl() {
 	if [[ $VERBOSE -eq 1 ]]; then

@@ -179,7 +179,7 @@ piname_present_get_bootfs() {
 # Defined as a variable in case we need to add parameters (like -s) to it.
 # WARNING:  Including -k for now.
 CURL=( curl -ks -f )
-VCURL=( curl -k -f --progress-bar)
+VCURL=( curl -k -f --progress-bar --show-error)
 
 vcurl() {
 	if [[ $VERBOSE -eq 1 ]]; then
@@ -515,7 +515,14 @@ install() {
 		vecho "Checking if URL $1 exists"
 		if ! "${CURL[@]}" --max-time 30 --connect-timeout \
 				10 --head "$1" > /dev/null 2>&1; then
-			vecho "URL $1 is not accessible or does not exist"
+			# Get HTTP status code for error reporting
+			http_code=$(curl -ks -w "%{http_code}" --max-time 30 --connect-timeout \
+				10 --head -o /dev/null "$1" 2>/dev/null)
+			if [[ -n "$http_code" && "$http_code" != "000" ]]; then
+				vecho "URL $1 returned HTTP Status: $http_code"
+			else
+				vecho "URL $1 is not accessible or does not exist"
+			fi
 			# Fall through to treat as boot stamp
 		else
 			vecho "Downloading from URL $1"

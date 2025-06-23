@@ -512,9 +512,9 @@ install() {
 		# Explicit boot stamp or URL.
 
 		# Check if URL exists first
-		# XXX I think max-time 30s to fetch headers
+		# We believe max-time 30s to fetch headers
 		# is more than enough.
-		vecho "Checking if URL $1 exists"
+		vecho "Checking if URL $1 exists (30s) timeout"
 		if ! "${CURL[@]}" --max-time 30 --connect-timeout \
 				10 --head "$1" > /dev/null 2>&1; then
 			# Get HTTP status code for error reporting

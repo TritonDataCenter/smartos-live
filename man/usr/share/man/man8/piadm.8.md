@@ -330,15 +330,16 @@ piadm(8) -- Manage SmartOS Platform Images
 
     The following environment variables affect piadm(8) downloads internally.
 
-    PIADM_SUM_URL      If set, the value will be used to retrieve the checksums file, currently
-                            md5sums.txt file, which will used to validate the checksum of downloaded
-                            platform images.
+    PIADM_SUM_URL      If set, this properly-formed URL will be used to retrieve the checksums file.
+                            If not set, the default source of SmartOS PIs has a checksums file,
+                            based on PIADM_DIGEST_ALGORITHM (see below).
+                            The file is a list of {checksum, space, filename} tuples, one per line.
 
     PIADM_NO_SUM       If set to 1, this will skip checksum validation for downloaded platform
                             images.
 
-    PIADM_DIGEST_ALGORITHM  If set, the value will be used by digest(1) to calculate the checksums
-                            for downloaded platform images. By default md5 is used.
+    PIADM_DIGEST_ALGORITHM  If set, this value will be used by digest(1) to calculate checksums for
+                                 downloaded platform images (case sensitive). By default, md5 is used.
 
 ## EXIT STATUS
 

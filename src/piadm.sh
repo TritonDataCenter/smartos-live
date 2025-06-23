@@ -327,6 +327,8 @@ config_check() {
 		PIADM_CONFIG_VERSION=1
 		cat <<EOF  > $PIADM_CONF
 PIADM_CONFIG_VERSION=$PIADM_CONFIG_VERSION
+PIADM_DIGEST_ALGORITHM="md5"
+PIADM_NO_SUM="0"
 EOF
 
 	fi
@@ -355,6 +357,7 @@ EOF
 
 	# Can furthermore be overridden by the user's PIADM_URL_PREFIX.
 	URL_PREFIX=${PIADM_URL_PREFIX:-${DEFAULT_URL_PREFIX}}
+	source "${PIADM_CONF}"
 }
 
 avail() {
@@ -516,10 +519,11 @@ install() {
 		# is more than enough.
 		vecho "Checking if URL $1 exists (30s) timeout"
 		if ! "${CURL[@]}" --max-time 30 --connect-timeout \
-				10 --head "$1" > /dev/null 2>&1; then
+				10 --head "$1" -w "%{http_code}" 2> /dev/null |\
+				tail -1 > /var/run/piadm.http.$$; then
 			# Get HTTP status code for error reporting
-			http_code=$(curl -ks -w "%{http_code}" --max-time 30 --connect-timeout \
-				10 --head -o /dev/null "$1" 2>/dev/null)
+			http_code=$(cat /var/run/piadm.$$)
+			/bin/rm -f /var/run/piadm.http.$$
 			if [[ -n "$http_code" && "$http_code" != "000" ]]; then
 				vecho "URL $1 returned HTTP Status: $http_code"
 			else
@@ -1659,6 +1663,7 @@ bootparams | grep -q 'headnode=' && initialize_as_HN
 
 # Check the configuration file out.
 config_check
+
 
 cmd=$1
 shift 1

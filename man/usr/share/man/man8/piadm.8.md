@@ -339,7 +339,7 @@ piadm(8) -- Manage SmartOS Platform Images
                             images.
 
     PIADM_DIGEST_ALGORITHM  If set, this value will be used by digest(1) to calculate checksums for
-                                 downloaded platform images (case sensitive). By default, md5 is used.
+                                downloaded platform images (case sensitive). By default, md5 is used.
 
 ## EXIT STATUS
 

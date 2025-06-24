@@ -221,7 +221,7 @@ declare stamp=""
 fetch_csum() {
 	if [[ -z "$csum_platform" ]]; then
 		local platform_file
-		if [ "$1" != "latest" ]; then
+		if [[ "$1" != "latest" ]]; then
 			IFS='/' read -ra array <<< "$1"
 			platform_file="${array[-1]}"
 			stamp="${array[-2]}"

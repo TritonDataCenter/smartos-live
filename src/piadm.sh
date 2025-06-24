@@ -213,7 +213,7 @@ PIADM_CONF=/var/piadm/piadm.conf
 # Notes:
 #   - If "latest" is used, up to 1024 PIs will be listed from ${URL_PREFIX}.
 #     The last one is assumed to be the latest.
-#   - On error, this function exits with code 1, following PIADM(8)
+#   - On error, this function exits with code 1, following piadm(8)
 #     convention: the error indicates a failure, but no changes were made
 #     to the system.
 declare csum_platform=""

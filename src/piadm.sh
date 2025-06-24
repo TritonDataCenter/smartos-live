@@ -358,7 +358,6 @@ EOF
 	# Can furthermore be overridden by the user's PIADM_URL_PREFIX.
 	URL_PREFIX=${PIADM_URL_PREFIX:-${DEFAULT_URL_PREFIX}}
 	
-
 	# Allow environment variables to override config file values
 	[[ -n "${PIADM_DIGEST_ALGORITHM}" ]] && export PIADM_DIGEST_ALGORITHM
 	[[ -n "${PIADM_NO_SUM}" ]] && export PIADM_NO_SUM

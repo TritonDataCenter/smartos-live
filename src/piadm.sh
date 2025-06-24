@@ -327,8 +327,8 @@ config_check() {
 		PIADM_CONFIG_VERSION=1
 		cat <<EOF  > $PIADM_CONF
 PIADM_CONFIG_VERSION=$PIADM_CONFIG_VERSION
-PIADM_DIGEST_ALGORITHM="md5"
-PIADM_NO_SUM="0"
+PIADM_DIGEST_ALGORITHM=\${PIADM_DIGEST_ALGORITHM:-md5}
+PIADM_NO_SUM=\${PIADM_NO_SUM:-0}
 EOF
 
 	fi
@@ -357,6 +357,14 @@ EOF
 
 	# Can furthermore be overridden by the user's PIADM_URL_PREFIX.
 	URL_PREFIX=${PIADM_URL_PREFIX:-${DEFAULT_URL_PREFIX}}
+	
+
+	# Allow environment variables to override config file values
+	[[ -n "${PIADM_DIGEST_ALGORITHM}" ]] && export PIADM_DIGEST_ALGORITHM
+	[[ -n "${PIADM_NO_SUM}" ]] && export PIADM_NO_SUM
+	[[ -n "${PIADM_URL_PREFIX}" ]] && URL_PREFIX="${PIADM_URL_PREFIX}"
+	[[ -n "${PIADM_SUM_URL}" ]] && export PIADM_SUM_URL
+
 	source "${PIADM_CONF}"
 }
 
@@ -522,15 +530,14 @@ install() {
 				10 --head "$1" -w "%{http_code}" 2> /dev/null |\
 				tail -1 > /var/run/piadm.http.$$; then
 			# Get HTTP status code for error reporting
-			http_code=$(cat /var/run/piadm.$$)
+			http_code=$(cat /var/run/piadm.http.$$)
 			/bin/rm -f /var/run/piadm.http.$$
 			if [[ -n "$http_code" && "$http_code" != "000" ]]; then
 				vecho "URL $1 returned HTTP Status: $http_code"
-			else
-				vecho "URL $1 is not accessible or does not exist"
 			fi
 			# Fall through to treat as boot stamp
 		else
+		    /bin/rm -f /var/run/piadm.http.$$
 			vecho "Downloading from URL $1"
 			if vcurl -o "${tdir}/download" "$1"; then
 				# Recurse with the downloaded file.
@@ -1663,7 +1670,6 @@ bootparams | grep -q 'headnode=' && initialize_as_HN
 
 # Check the configuration file out.
 config_check
-
 
 cmd=$1
 shift 1

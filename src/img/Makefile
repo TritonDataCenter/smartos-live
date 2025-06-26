@@ -26,6 +26,8 @@
 # imgadm Makefile
 #
 
+MAN_CHECK_TARGETS=\
+	man/imgadm.8.md
 
 #
 # Targets
@@ -60,3 +62,10 @@ dev-install-image:
 	cp -PR tools/coal-create-docker-vm.sh $(INSTALLIMAGE)/tools/
 	mkdir -p $(INSTALLIMAGE)/man
 	node ../../tools/ronnjs/bin/ronn.js man/imgadm.8.md > $(INSTALLIMAGE)/man/imgadm.8
+
+mancheck:
+	@printf "\n==> Check man page line lengths...\n"
+	@(for file in $(MAN_CHECK_TARGETS); do \
+		echo $$file; \
+		cat $$file | awk '{ if (length($0) > 80) { x = length($0); print $0 } } END { exit x }'; \
+	done)

@@ -45,11 +45,14 @@ MAN_FILES = \
 
 PROTO_FILES = $(MAN_FILES:%=$(DESTDIR)/%)
 
+
 clean:
 
 all:
 
 install: $(PROTO_FILES)
+
+check: mancheck
 
 $(DESTDIR)/%: %
 	mkdir -p $(@D)
@@ -81,3 +84,15 @@ $(DESTDIR)/usr/share/man/man8/%: $(ROOT)/src/vm/man/%.md
 	mkdir -p $(@D)
 	rm -f $@
 	$(RONNJS) --roff $< > $@
+
+
+mancheck:
+	@printf "\n==> Check man page line lengths...\n"
+	@(for file in $(MAN_FILES); do \
+		if [[ -e $$file ]]; then\
+		echo $$file; \
+		mandoc -Tascii -Owidth=80 $$file | \
+		awk '{ if (length($$0) > 80 && index($$0,sprintf("%c",8)) == 0 )\
+		{ x = length($$0); print $$0 } } END { exit x }'; \
+		fi \
+	done)

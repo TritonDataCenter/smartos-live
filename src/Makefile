@@ -148,6 +148,15 @@ JS_CHECK_OLDSKOOL_TARGETS = \
 	smartdc/lib/ntp_config.js \
 	node_modules/disklayout.js
 
+MD_MANPAGES = \
+	dockerinit/mdata-client/man/man8/mdata-get.8 \
+	dockerinit/mdata-client/man/man8/mdata-delete.8 \
+	dockerinit/mdata-client/man/man8/mdata-list.8 \
+	dockerinit/mdata-client/man/man8/mdata-put.8 \
+	img/man/imgadm.8.md \
+	vm/man/vmadm.8.md \
+	vm/man/vmadmd.8.md
+
 # "json.js" intentionally missing
 
 # These files will get run through cstyle on 'make check'
@@ -549,6 +558,18 @@ check: $(JSLINT) $(SUBDIRS)
 	done)
 	@$(MAKE) -C fw check
 	@printf "\nJS style ok!\n"
+	@echo "==> Running man page checks..."
+	@$(MAKE) -C ../man check
+	@$(MAKE) -C ./img mancheck
+	(for file in $(MD_MANPAGES); do \
+		echo $(BASE)/$$file; \
+		cat $(BASE)/$$file | \
+		awk '{ if (length($$0) > 80 && \
+		index($$0,".TH") == 0 )\
+		{ x = length($0); print $0 } } END { exit x }'; \
+		[[ $$? == "0" ]] || exit 1; \
+	done)
+	@printf "\nMan page checks  ok!\n"
 
 .PHONY: manifest
 manifest:

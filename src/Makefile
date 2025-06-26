@@ -11,6 +11,7 @@
 
 #
 # Copyright 2019 Joyent, Inc.
+# Copyright 2025 MNX Cloud, Inc.
 #
 
 BASE =		$(CURDIR)

@@ -21,6 +21,7 @@
 # CDDL HEADER END
 #
 # Copyright (c) 2013, Joyent, Inc. All rights reserved.
+# Copyright 2025 MNX Cloud, Inc.
 #
 #
 # imgadm Makefile

@@ -13,10 +13,11 @@
 
 #
 # Copyright 2022 Joyent, Inc.
-# Copyright 2024 MNX Cloud, Inc.
+# Copyright 2025 MNX Cloud, Inc.
 #
 
 # shellcheck disable=1091
+
 . /lib/sdc/usb-key.sh
 
 eecho() {
@@ -177,8 +178,8 @@ piname_present_get_bootfs() {
 
 # Defined as a variable in case we need to add parameters (like -s) to it.
 # WARNING:  Including -k for now.
-CURL=( curl -ks -f )
-VCURL=( curl -k -f --progress-bar )
+CURL=( curl -ks -f --show-error)
+VCURL=( curl -k -f --progress-bar)
 
 vcurl() {
 	if [[ $VERBOSE -eq 1 ]]; then
@@ -194,6 +195,104 @@ vcurl() {
 DEFAULT_URL_PREFIX=https://us-central.manta.mnx.io/Joyent_Dev/public/SmartOS/
 # Default path for piadm's configuration
 PIADM_CONF=/var/piadm/piadm.conf
+
+# fetch_csum
+#
+# Fetches checksums using a platform file as the key.
+#
+# Arguments:
+#   $1 - URL from where to fetch the PI from. The name of the PI
+#   	 is expected to be the last path component of the URL,
+#   	 or the literal string "latest".
+#
+# Environment Variables:
+#   PIADM_NO_SUM     - If set to 1, skips checksum validation.
+#   PIADM_SUM_URL    - If set, overrides the default URL used
+#                      the checksum file used for platform images.
+#
+# Notes:
+#   - If "latest" is used, up to 1024 PIs will be listed from ${URL_PREFIX}.
+#     The last one is assumed to be the latest.
+#   - On error, this function exits with code 1, following piadm(8)
+#     convention: the error indicates a failure, but no changes were made
+#     to the system.
+declare csum_platform=""
+declare stamp=""
+fetch_csum() {
+	if [[ -z "$csum_platform" ]]; then
+		local platform_file
+		if [[ "$1" != "latest" ]]; then
+			IFS='/' read -ra array <<< "$1"
+			platform_file="${array[-1]}"
+			stamp="${array[-2]}"
+		else
+			#latest is a special case, we need find out stamp
+			stamps_url="${URL_PREFIX%/}?limit=1024"
+			stamp=$("${CURL[@]}" "${stamps_url}" |\
+				json -ga -c "this.name.match(/Z$/)" | json -ag name |\
+				sort  | tail -1; exit "${PIPESTATUS[0]}")
+			code=$?
+			if [[ $code -ne 0 ]]; then
+				eecho "Curl failed fetching PI data from ${stamps_url}"
+				return 1
+			fi
+			platform_file="smartos-${stamp}.iso"
+		fi
+		if [[ -z ${PIADM_SUM_URL} ]];then
+			local csum_url="${URL_PREFIX}${stamp}/${PIADM_DIGEST_ALGORITHM:-md5}sums.txt"
+		else
+			local csum_url="${PIADM_SUM_URL}"
+		fi
+		csum_platform=$("${CURL[@]}"  "${csum_url}" |\
+			awk -v pattern="${platform_file}"\
+			'$0 ~ pattern { print $1; exit}'; exit "${PIPESTATUS[0]}")
+		code=$?
+		if [[ $code -ne 0 ]]; then
+			eecho "fetching checksums from ${csum_url}"
+			#force re-calculation of checksum on the next call.
+			csum_platform=""
+			stamp=""
+			return 1
+		fi
+	fi
+	echo "${csum_platform}"
+	return 0
+}
+
+# validate_csum
+#
+# $1 is the URL from where the PI was downloaded.
+# $2 is the on disk PI image that was download from $1.
+#
+# Error code will always be 1, following the piadm(8) convention where
+# a return code of 1 means: an error has occurred, but no change was made.
+# Environment variable PIADM_DIGEST_ALGORITHM controls the checksum
+# algorithm used by digest(1), by default md5 is used.  
+validate_csum() {
+	if [[ $PIADM_NO_SUM -eq 1 ]]; then
+		vecho "WARNING: Not using validation checksum"
+		return 0
+	fi
+	published_csum=$(fetch_csum "$1")
+	code=$?
+	if [[ $code -ne 0 ]]; then
+		eecho "Could not get checksum for PI exit code: ${code}"
+		return 1
+	fi
+	local_csum=$(digest -a "${PIADM_DIGEST_ALGORITHM:-md5}" "${2}")
+	code=$?
+	if [[ $code -ne 0 ]]; then
+		eecho "checksum failed for $2, algorithm used: ${PIADM_DIGEST_ALGORITHM}"
+		return 1
+	fi
+	vecho "published_checksum: ${published_csum}"
+	vecho "local_checksum:     ${local_csum}"
+	if [[ "${published_csum}" != "${local_csum}" ]]; then
+		eecho  "local file does not match published checksum"
+		return 1
+	fi
+	return 0
+}
 
 #
 # (Re)-Configure the default URL (and potentially other things in the future)
@@ -228,6 +327,8 @@ config_check() {
 		PIADM_CONFIG_VERSION=1
 		cat <<EOF  > $PIADM_CONF
 PIADM_CONFIG_VERSION=$PIADM_CONFIG_VERSION
+PIADM_DIGEST_ALGORITHM=\${PIADM_DIGEST_ALGORITHM:-md5}
+PIADM_NO_SUM=\${PIADM_NO_SUM:-0}
 EOF
 
 	fi
@@ -256,6 +357,14 @@ EOF
 
 	# Can furthermore be overridden by the user's PIADM_URL_PREFIX.
 	URL_PREFIX=${PIADM_URL_PREFIX:-${DEFAULT_URL_PREFIX}}
+	
+	# Allow environment variables to override config file values
+	[[ -n "${PIADM_DIGEST_ALGORITHM}" ]] && export PIADM_DIGEST_ALGORITHM
+	[[ -n "${PIADM_NO_SUM}" ]] && export PIADM_NO_SUM
+	[[ -n "${PIADM_URL_PREFIX}" ]] && URL_PREFIX="${PIADM_URL_PREFIX}"
+	[[ -n "${PIADM_SUM_URL}" ]] && export PIADM_SUM_URL
+
+	source "${PIADM_CONF}"
 }
 
 avail() {
@@ -346,10 +455,18 @@ install() {
 			/bin/rm -rf "${tdir}"
 			fatal "Curl exit code $code"
 		fi
+		validate_csum "$1" "${tdir}/smartos.iso"
+		code=$?
+		if [[ $code -ne 0 ]]; then
+			/bin/rm -rf "${tdir}"
+			err "Cannot validate checksum for $1"
+		fi
 		mount -F hsfs "${tdir}/smartos.iso" "${tdir}/mnt"
-
-		# For now, assume boot stamp and PI stamp are the same on an ISO...
-		stamp=$(cat "${tdir}/mnt/etc/version/boot")
+		# if user disabled checksums, we don't have a stamp.
+		if [[ -z "${stamp}" ]]; then
+			# For now, assume boot stamp and PI stamp are the same on an ISO...
+			stamp=$(cat "${tdir}/mnt/etc/version/boot")
+		fi
 	elif [[ "$1" == "media" ]]; then
 		# Scan the available media to find what we seek.  Same advice
 		# about making sure it's the current one.
@@ -359,9 +476,12 @@ install() {
 			err "Cannot find install media"
 		fi
 
-		# For now, assume boot stamp and PI stamp are the same on
-		# install media.
-		stamp=$(cat "${tdir}/mnt/etc/version/boot")
+		# if user disabled checksums, we don't have a stamp.
+		if [[ -z "${stamp}" ]]; then
+			# For now, assume boot stamp and PI stamp are the same on
+			# install media.
+			stamp=$(cat "${tdir}/mnt/etc/version/boot")
+		fi
 	elif [[ -f $1 ]]; then
 		# File input!  Check for what kind, etc. etc.
 
@@ -372,7 +492,10 @@ install() {
 			vecho "Treating $1 as an ISO file."
 			iso=yes
 			mount -F hsfs "$1" "${tdir}/mnt"
-			stamp=$(cat "${tdir}/mnt/etc/version/boot")
+			# if user disabled checksums, we don't have a stamp.
+			if [[ -z "${stamp}" ]]; then
+				stamp=$(cat "${tdir}/mnt/etc/version/boot")
+			fi
 		elif [[ "$filetype" == "gzip" ]]; then
 			# SmartOS PI.  Let's confirm it's actually a .tgz...
 
@@ -387,7 +510,10 @@ install() {
 			gtar -xzf "$1" -C "${tdir}/mnt"
 			mv "${tdir}"/mnt/platform-* "${tdir}/mnt/platform"
 			iso=no
-			stamp=$(cat "${tdir}/mnt/platform/etc/version/platform")
+			# if user disabled checksums, we don't have a stamp.
+			if [[ -z "${stamp}" ]]; then
+				stamp=$(cat "${tdir}/mnt/platform/etc/version/platform")
+			fi
 		else
 			/bin/rm -rf "${tdir:?}"
 			err "Unknown file type for $1"
@@ -395,21 +521,38 @@ install() {
 	else
 		# Explicit boot stamp or URL.
 
-		# Do a URL reality check.
-		vecho "Attempting download of URL $1"
-		vcurl -o "${tdir}/download" "$1"
-		if [[ -e ${tdir}/download ]]; then
-			# Recurse with the downloaded file.
-			dload=$(mktemp)
-			mv -f "${tdir}/download" "$dload"
-			/bin/rm -rf "${tdir}"
-
-			# in case `install` exits out early...
-			( pwait $$ ; rm -f "$dload" ) &
-			vecho "Installing $1"
-			vecho "	   (downloaded to $dload)"
-			install "$dload" "$2"
-			return 0
+		# Check if URL exists first
+		# We believe max-time 30s to fetch headers
+		# is more than enough.
+		vecho "Checking if URL $1 exists (30s) timeout"
+		if ! "${CURL[@]}" --max-time 30 --connect-timeout \
+				10 --head "$1" -w "%{http_code}" 2> /dev/null |\
+				tail -1 > /var/run/piadm.http.$$; then
+			# Get HTTP status code for error reporting
+			http_code=$(cat /var/run/piadm.http.$$)
+			/bin/rm -f /var/run/piadm.http.$$
+			if [[ -n "$http_code" && "$http_code" != "000" ]]; then
+				vecho "URL $1 returned HTTP Status: $http_code"
+			fi
+			# Fall through to treat as boot stamp
+		else
+		    /bin/rm -f /var/run/piadm.http.$$
+			vecho "Downloading from URL $1"
+			if vcurl -o "${tdir}/download" "$1"; then
+				# Recurse with the downloaded file.
+				dload=$(mktemp)
+				mv -f "${tdir}/download" "$dload"
+				/bin/rm -rf "${tdir}"
+				# in case `install` exits out early...
+				( pwait $$ ; rm -f "$dload" ) &
+				vecho "Installing $1"
+				vecho "	   (downloaded to $dload)"
+				install "$dload" "$2"
+				return 0
+			else
+				vecho "Failed to download from URL $1"
+				# Fall through to treat as boot stamp
+			fi
 		fi
 		# Else we treat it like a boot stamp.
 
@@ -436,6 +579,12 @@ install() {
 		if [[ $code -ne 0 ]]; then
 			/bin/rm -rf "${tdir}"
 			fatal "PI-stamp $1 -- curl exit code $code"
+		fi
+		validate_csum "${URL_PREFIX}/$1/smartos-${1}.iso" "${tdir}/smartos.iso"
+ 		code=$?
+		if [[ $code -ne 0 ]]; then
+			/bin/rm -rf "${tdir}"
+			err "validate_csum exit code  $code"
 		fi
 		mount -F hsfs "${tdir}/smartos.iso" "${tdir}/mnt"
 		code=$?

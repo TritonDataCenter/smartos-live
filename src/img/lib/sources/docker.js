@@ -21,9 +21,8 @@
  * CDDL HEADER END
  *
  * Copyright (c) 2018, Joyent, Inc. All rights reserved.
+ * Copyright 2025 Edgecast Cloud LLC.
  */
-
-var p = console.log;
 
 var assert = require('assert-plus');
 var concat = require('concat-stream');
@@ -195,7 +194,13 @@ DockerSource.prototype.getImportInfo = function getImportInfo(opts, cb) {
     var importInfo;
 
     var client = self._clientFromRepo(rat);
-    client.getManifest({ref: rat.tag}, function (err, dockerManifest, res) {
+    client.getManifestRef({ref: rat.tag}, function(err_, dockerManifestRef, res) {
+        if (err_ && err_.statusCode !== 404) {
+            cb(err_);
+            return;
+        }
+        var ref = dockerManifestRef || rat.tag;
+    client.getManifest({ref: ref}, function (err, dockerManifest, res) {
         if (err) {
             if (err.statusCode === 404) {
                 cb();
@@ -238,7 +243,11 @@ DockerSource.prototype.getImportInfo = function getImportInfo(opts, cb) {
             }
         );
 
-        var configDigest = dockerManifest.config.digest;
+        var configDigest = dockerManifest.config && dockerManifest.config.digest;
+        if(!configDigest){
+             cb(new errors.InvalidDockerInfoError('Missing config digest in manifest'));
+             return;
+        }
         client.createBlobReadStream({digest: configDigest},
             function (err, stream, ress) {
                 if (err) {
@@ -269,16 +278,16 @@ DockerSource.prototype.getImportInfo = function getImportInfo(opts, cb) {
     
                 // stream error handling
                 stream.on('error', function (err) {
-                   console.error('read stream error:', err);
-                   cb(err);
+                self.log.error('read stream error:', err);
+                    cb(err);
                 });
     
                 stream.resume();
             }
         );
     });
-}
-
+  });
+};
 
 DockerSource.prototype.titleFromImportInfo =
 function titleFromImportInfo(importInfo) {

@@ -26,11 +26,9 @@
 # imgadm Makefile
 #
 
-
 #
 # Targets
 #
-
 .PHONY: test
 test:
 	./test/runtests
@@ -60,3 +58,16 @@ dev-install-image:
 	cp -PR tools/coal-create-docker-vm.sh $(INSTALLIMAGE)/tools/
 	mkdir -p $(INSTALLIMAGE)/man
 	node ../../tools/ronnjs/bin/ronn.js man/imgadm.8.md > $(INSTALLIMAGE)/man/imgadm.8
+
+
+
+.PHONY: xref
+xref: cscope.files
+	$(CSCOPE) -bqR
+
+.PHONY: cscope.files
+cscope.files:
+	find $(CSCOPE_DIRS) -name '*.c' -o -name '*.h' -o -name '*.cc' \
+        -o -name '*.js' -o -name '*.s' -o -name '*.cpp' > $@
+
+

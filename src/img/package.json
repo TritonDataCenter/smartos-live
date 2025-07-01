@@ -2,7 +2,7 @@
   "name": "imgadm",
   "description": "Manage SmartOS virtual machine images.",
   "version": "3.9.5",
-  "author": "MNX Cloud (mnxsolutions.com)",
+  "author": "Edgecast Cloud LLC",
   "private": true,
   "dependencies": {
     "assert-plus": "0.1.5",

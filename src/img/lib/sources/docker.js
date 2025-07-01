@@ -244,7 +244,7 @@ DockerSource.prototype.getImportInfo = function getImportInfo(opts, cb) {
         );
 
         var configDigest = dockerManifest.config && dockerManifest.config.digest;
-        if(!configDigest){
+        if(!configDigest) {
              cb(new errors.InvalidDockerInfoError('Missing config digest in manifest'));
              return;
         }

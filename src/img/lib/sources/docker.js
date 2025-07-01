@@ -194,12 +194,12 @@ DockerSource.prototype.getImportInfo = function getImportInfo(opts, cb) {
     var importInfo;
 
     var client = self._clientFromRepo(rat);
-    client.getManifestRef({ref: rat.tag}, function(err_, dockerManifestRef, res) {
+    client.getManifestDgst({ref: rat.tag}, function(err_, dockerManifestDgst, res) {
         if (err_ && err_.statusCode !== 404) {
             cb(err_);
             return;
         }
-        var ref = dockerManifestRef || rat.tag;
+        var ref = dockerManifestDgst || rat.tag;
     client.getManifest({ref: ref}, function (err, dockerManifest, res) {
         if (err) {
             if (err.statusCode === 404) {
@@ -244,7 +244,7 @@ DockerSource.prototype.getImportInfo = function getImportInfo(opts, cb) {
         );
 
         var configDigest = dockerManifest.config && dockerManifest.config.digest;
-        if(!configDigest) {
+        if (!configDigest) {
              cb(new errors.InvalidDockerInfoError('Missing config digest in manifest'));
              return;
         }

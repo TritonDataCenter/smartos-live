@@ -11,7 +11,9 @@ f smartdc/man/man1/sdc-zfs-io-throttle.1 0444 root bin
 f usr/share/man/man.cf 0444 root bin
 f usr/share/man/man1/json.1 0444 root bin
 f usr/share/man/man7/fwrule.7 0444 root bin
+s usr/share/man/man7/builder.7=joyent.7
 f usr/share/man/man7/joyent.7 0444 root bin
+s usr/share/man/man7/joyent-minimal.7=joyent.7
 f usr/share/man/man7/openssl.7 0444 root bin
 f usr/share/man/man8/disklayout.8 0444 root bin
 f usr/share/man/man8/fssstat.8 0444 root bin

@@ -44,8 +44,6 @@ var Source = require('./source');
 
 var DOCKER_HUB_URL = 'https://docker.io';
 
-
-
 // ---- docker source
 
 function DockerSource(opts) {
@@ -162,6 +160,126 @@ function _importInfoFromV21Manifest(opts, cb) {
     cb(null, importInfo);
 }
 
+/*
+ * Handle manifest lists - select the appropriate manifest from the
+ * list of possible platforms, currently only fetches linux-amd64 or
+ * linux-386, that depends which arch is first on the manifest.
+ */
+function _getPlatformManifestfromList(opts, cb) {
+  assert.object(opts, 'opts');
+  assert.object(opts.dockerManifest, 'opts.dockerManifest');
+  assert.object(opts.rat, 'opts.rat');
+  assert.object(opts.client, 'opts.client');
+  assert.func(cb, 'cb');
+  assert.arrayOfObject(opts.dockerManifest.manifests);
+  if (!opts.dockerManifest.hasOwnProperty('mediaType')) {
+    cb(
+      new errors.InvalidDockerInfoError(
+        "No docker manifest mediaType defined"
+      )
+    );
+    return;
+  }
+
+  var supportedPlatforms = ['amd64', '386'];
+  var selectedDigest = null;
+  var rat = opts.rat;
+  var ManifestList = opts.dockerManifest.manifests;
+
+  for (var i = 0; i < ManifestList.length; i++) {
+      var p = ManifestList[i].platform;
+      if (p && p.os === "linux" &&
+          supportedPlatforms.indexOf(p.architecture) !== -1) {
+          selectedDigest = ManifestList[i].digest;
+          break;
+      }
+  }
+  if (!selectedDigest) {
+    var plats = [];
+    ManifestList.forEach(function _maniMap(mani) {
+      plats.push(
+        (mani.platform &&
+          format("%s-%s", mani.platform.os, mani.platform.architecture)) ||
+          "<unknown>"
+      );
+    });
+    cb(
+      new errors.InvalidDockerInfoError(
+        format("no linux-amd64 platform found in manifest list: %s", plats)
+      )
+    );
+    return;
+  }
+  var client = opts.client;
+  client.getManifest({ ref: selectedDigest },
+                      function (err, dockerManifest, res) {
+      if (err) {
+        if (err.statusCode === 404) {
+          cb();
+        } else {
+          cb(err);
+        }
+        return;
+      }
+      assert.arrayOfObject(dockerManifest.layers, 'dockerManifest.layers');
+      var layerDigests = dockerManifest.layers.map(function (l) {
+        return l.digest;
+      });
+
+      if (!dockerManifest.config.digest) {
+        cb(
+          new errors.InvalidDockerInfoError(
+            "No docker manifest config defined"
+          )
+        );
+        return;
+      }
+      var configDigest = dockerManifest.config.digest;
+      client.createBlobReadStream(
+        { digest: configDigest },
+        function (err, stream, ress) {
+          if (err) {
+            cb(err);
+            return;
+          }
+          stream.pipe(
+            concat(function (buf) {
+              var imgJson;
+              try {
+                imgJson = JSON.parse(buf.toString());
+              } catch (ex) {
+                cb(ex);
+                return;
+              }
+
+              var importInfo = {
+                repo: rat,
+                tag: rat.tag, // the requested tag
+                tags: [rat.tag], // all the tags on that imgId
+                imgId:
+                  dockerManifest.layers[dockerManifest.layers.length - 1]
+                    .digest,
+                imgJson: imgJson,
+                dockerManifest: dockerManifest,
+                layerDigests: layerDigests,
+                uuid: imgmanifest.imgUuidFromDockerDigests(layerDigests),
+              };
+              cb(null, importInfo);
+            })
+          );
+
+          // stream error handling
+          stream.on("error", function (err) {
+            console.error("read stream error:", err);
+            cb(err);
+          });
+
+          stream.resume();
+        }
+      );
+    }
+  );
+}
 
 /**
  * Attempt to find import info for the given docker pull arg, `REPO[:TAG]`
@@ -188,14 +306,14 @@ DockerSource.prototype.getImportInfo = function getImportInfo(opts, cb) {
      */
     try {
         var rat = drc.parseRepoAndTag(opts.arg);
-    } catch(e) {
+    } catch (e) {
         return cb();
     }
-    
+
     var importInfo;
 
     var client = self._clientFromRepo(rat);
-    client.getManifest({ref: rat.tag}, function (err, dockerManifest, res) {
+    client.getManifest({ ref: rat.tag }, function (err, dockerManifest, res) {
         if (err) {
             if (err.statusCode === 404) {
                 cb();
@@ -204,7 +322,6 @@ DockerSource.prototype.getImportInfo = function getImportInfo(opts, cb) {
             }
             return;
         }
-
         assert.object(dockerManifest, 'manifest');
         if (!dockerManifest.hasOwnProperty('schemaVersion')) {
             cb(new errors.InvalidDockerInfoError(
@@ -228,57 +345,69 @@ DockerSource.prototype.getImportInfo = function getImportInfo(opts, cb) {
             return;
         }
 
+        if (drc.manifestListTypes.indexOf(dockerManifest.mediaType) !== -1) {
+            _getPlatformManifestfromList({
+                dockerManifest: dockerManifest,
+                rat: rat,
+                client: client
+            }, cb);
+            return;
+        }
         // For schemaVersion 2 manifests - must fetch the imgJson separately.
         assert.equal(dockerManifest.schemaVersion, 2,
             'dockerManifest.schemaVersion === 2');
-
-        var layerDigests = dockerManifest.layers.map(
-            function (l) {
-                return l.digest;
-            }
-        );
+        assert.arrayOfObject(dockerManifest.layers, 'dockerManifest.layers');
+        var layerDigests = dockerManifest.layers.map(function (l) {
+            return l.digest;
+        });
 
         var configDigest = dockerManifest.config.digest;
-        client.createBlobReadStream({digest: configDigest},
+        client.createBlobReadStream(
+            { digest: configDigest },
             function (err, stream, ress) {
                 if (err) {
                     cb(err);
                     return;
                 }
-                stream.pipe(concat(function (buf) {
-                    var imgJson;
-                    try {
-                        imgJson = JSON.parse(buf.toString());
-                    } catch (ex) {
-                        cb(ex);
-                        return;
-                    }
-    
-                    importInfo = {
-                        repo: rat,
-                        tag: rat.tag,   // the requested tag
-                        tags: [rat.tag], // all the tags on that imgId
-                        imgId: dockerManifest.layers[dockerManifest.layers.length-1].digest,
-                        imgJson: imgJson,
-                        dockerManifest: dockerManifest,
-                        layerDigests: layerDigests,
-                        uuid: imgmanifest.imgUuidFromDockerDigests(layerDigests)
-                    };
-                    cb(null, importInfo);
-                }));
-    
+                stream.pipe(
+                    concat(function (buf) {
+                        var imgJson;
+                        try {
+                            imgJson = JSON.parse(buf.toString());
+                        } catch (ex) {
+                            cb(ex);
+                            return;
+                        }
+
+                        importInfo = {
+                            repo: rat,
+                            tag: rat.tag, // the requested tag
+                            tags: [rat.tag], // all the tags on that imgId
+                            imgId:
+                            dockerManifest
+                                .layers[dockerManifest.layers.length - 1]
+                                .digest,
+                            imgJson: imgJson,
+                            dockerManifest: dockerManifest,
+                            layerDigests: layerDigests,
+                            uuid: imgmanifest
+                                .imgUuidFromDockerDigests(layerDigests)
+                        };
+                        cb(null, importInfo);
+                    })
+                );
+
                 // stream error handling
                 stream.on('error', function (err) {
-                   console.error('read stream error:', err);
-                   cb(err);
+                    console.error('read stream error:', err);
+                    cb(err);
                 });
-    
+
                 stream.resume();
             }
         );
     });
-}
-
+};
 
 DockerSource.prototype.titleFromImportInfo =
 function titleFromImportInfo(importInfo) {

@@ -21,6 +21,7 @@
  * CDDL HEADER END
  *
  * Copyright (c) 2018, Joyent, Inc. All rights reserved.
+ * Copyright 2025 Edgecast Cloud LLC.
  */
 
 var p = console.log;

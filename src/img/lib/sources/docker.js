@@ -236,50 +236,66 @@ function _getPlatformManifestfromList(opts, cb) {
         return;
       }
       var configDigest = dockerManifest.config.digest;
-      client.createBlobReadStream(
-        { digest: configDigest },
-        function (err, stream, ress) {
-          if (err) {
-            cb(err);
-            return;
-          }
-          stream.pipe(
-            concat(function (buf) {
-              var imgJson;
-              try {
-                imgJson = JSON.parse(buf.toString());
-              } catch (ex) {
-                cb(ex);
-                return;
-              }
-
-              var importInfo = {
-                repo: rat,
-                tag: rat.tag, // the requested tag
-                tags: [rat.tag], // all the tags on that imgId
-                imgId:
-                  dockerManifest.layers[dockerManifest.layers.length - 1]
-                    .digest,
-                imgJson: imgJson,
-                dockerManifest: dockerManifest,
-                layerDigests: layerDigests,
-                uuid: imgmanifest.imgUuidFromDockerDigests(layerDigests),
-              };
-              cb(null, importInfo);
-            })
-          );
-
-          // stream error handling
-          stream.on("error", function (err) {
-            console.error("read stream error:", err);
-            cb(err);
-          });
-
-          stream.resume();
+      _getBlobAsJson(client, configDigest, function (err, imgJson) {
+        if (err) {
+          cb(err);
+          return;
         }
-      );
+
+        var importInfo = {
+          repo: rat,
+          tag: rat.tag, // the requested tag
+          tags: [rat.tag], // all the tags on that imgId
+          imgId:
+            dockerManifest.layers[dockerManifest.layers.length - 1]
+              .digest,
+          imgJson: imgJson,
+          dockerManifest: dockerManifest,
+          layerDigests: layerDigests,
+          uuid: imgmanifest.imgUuidFromDockerDigests(layerDigests),
+        };
+        cb(null, importInfo);
+      });
     }
   );
+}
+
+/*
+ * Converts a blob digest into a JSON object.
+ */
+function _getBlobAsJson(client, digest, cb) {
+    assert.object(client, 'client');
+    assert.string(digest, 'digest');
+    assert.func(cb, 'cb');
+
+    client.createBlobReadStream(
+        { digest: digest },
+        function (err, stream, ress) {
+            if (err) {
+                cb(err);
+                return;
+            }
+            stream.pipe(
+                concat(function (buf) {
+                    var imgJson;
+                    try {
+                        imgJson = JSON.parse(buf.toString());
+                    } catch (ex) {
+                        cb(ex);
+                        return;
+                    }
+                    cb(null, imgJson);
+                })
+            );
+
+            stream.on('error', function (err) {
+                console.error('read stream error:', err);
+                cb(err);
+            });
+
+            stream.resume();
+        }
+    );
 }
 
 /**
@@ -363,50 +379,28 @@ DockerSource.prototype.getImportInfo = function getImportInfo(opts, cb) {
         });
 
         var configDigest = dockerManifest.config.digest;
-        client.createBlobReadStream(
-            { digest: configDigest },
-            function (err, stream, ress) {
-                if (err) {
-                    cb(err);
-                    return;
-                }
-                stream.pipe(
-                    concat(function (buf) {
-                        var imgJson;
-                        try {
-                            imgJson = JSON.parse(buf.toString());
-                        } catch (ex) {
-                            cb(ex);
-                            return;
-                        }
-
-                        importInfo = {
-                            repo: rat,
-                            tag: rat.tag, // the requested tag
-                            tags: [rat.tag], // all the tags on that imgId
-                            imgId:
-                            dockerManifest
-                                .layers[dockerManifest.layers.length - 1]
-                                .digest,
-                            imgJson: imgJson,
-                            dockerManifest: dockerManifest,
-                            layerDigests: layerDigests,
-                            uuid: imgmanifest
-                                .imgUuidFromDockerDigests(layerDigests)
-                        };
-                        cb(null, importInfo);
-                    })
-                );
-
-                // stream error handling
-                stream.on('error', function (err) {
-                    console.error('read stream error:', err);
-                    cb(err);
-                });
-
-                stream.resume();
+        _getBlobAsJson(client, configDigest, function (err, imgJson) {
+            if (err) {
+                cb(err);
+                return;
             }
-        );
+
+            importInfo = {
+                repo: rat,
+                tag: rat.tag, // the requested tag
+                tags: [rat.tag], // all the tags on that imgId
+                imgId:
+                dockerManifest
+                    .layers[dockerManifest.layers.length - 1]
+                    .digest,
+                imgJson: imgJson,
+                dockerManifest: dockerManifest,
+                layerDigests: layerDigests,
+                uuid: imgmanifest
+                    .imgUuidFromDockerDigests(layerDigests)
+            };
+            cb(null, importInfo);
+        });
     });
 };
 

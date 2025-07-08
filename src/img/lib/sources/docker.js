@@ -195,87 +195,97 @@ DockerSource.prototype.getImportInfo = function getImportInfo(opts, cb) {
     var importInfo;
 
     var client = self._clientFromRepo(rat);
-    client.getManifest({ref: rat.tag}, function (err, dockerManifest, res) {
-        if (err) {
-            if (err.statusCode === 404) {
-                cb();
-            } else {
-                cb(err);
-            }
-            return;
+
+    client.getManifestRef({ref: rat.tag}, function(err_, dockerManifestRef, res_) {
+        var ref;
+        if ( dockerManifestRef !== undefined ) {
+            ref = dockerManifestRef;
+        } else {
+            ref = rat.tag;
         }
 
-        assert.object(dockerManifest, 'manifest');
-        if (!dockerManifest.hasOwnProperty('schemaVersion')) {
-            cb(new errors.InvalidDockerInfoError(
-                'No docker manifest schemaVersion defined'));
-            return;
-        }
-
-        if (dockerManifest.schemaVersion !== 1
-                && dockerManifest.schemaVersion !== 2) {
-            cb(new errors.InvalidDockerInfoError(
-                'Unsupported docker manifest version: '
-                 + dockerManifest.schemaVersion));
-            return;
-        }
-
-        if (dockerManifest.schemaVersion === 1) {
-            _importInfoFromV21Manifest({
-                dockerManifest: dockerManifest,
-                rat: rat
-            }, cb);
-            return;
-        }
-
-        // For schemaVersion 2 manifests - must fetch the imgJson separately.
-        assert.equal(dockerManifest.schemaVersion, 2,
-            'dockerManifest.schemaVersion === 2');
-
-        var layerDigests = dockerManifest.layers.map(
-            function (l) {
-                return l.digest;
-            }
-        );
-
-        var configDigest = dockerManifest.config.digest;
-        client.createBlobReadStream({digest: configDigest},
-            function (err, stream, ress) {
-                if (err) {
+        client.getManifest({ref: ref}, function (err, dockerManifest, res) {
+            if (err) {
+                if (err.statusCode === 404) {
+                    cb();
+                } else {
                     cb(err);
-                    return;
                 }
-                stream.pipe(concat(function (buf) {
-                    var imgJson;
-                    try {
-                        imgJson = JSON.parse(buf.toString());
-                    } catch (ex) {
-                        cb(ex);
+                return;
+            }
+
+            assert.object(dockerManifest, 'manifest');
+            if (!dockerManifest.hasOwnProperty('schemaVersion')) {
+                cb(new errors.InvalidDockerInfoError(
+                    'No docker manifest schemaVersion defined'));
+                return;
+            }
+
+            if (dockerManifest.schemaVersion !== 1
+                    && dockerManifest.schemaVersion !== 2) {
+                cb(new errors.InvalidDockerInfoError(
+                    'Unsupported docker manifest version: '
+                     + dockerManifest.schemaVersion));
+                return;
+            }
+
+            if (dockerManifest.schemaVersion === 1) {
+                _importInfoFromV21Manifest({
+                    dockerManifest: dockerManifest,
+                    rat: rat
+                }, cb);
+                return;
+            }
+
+            // For schemaVersion 2 manifests - must fetch the imgJson separately.
+            assert.equal(dockerManifest.schemaVersion, 2,
+                'dockerManifest.schemaVersion === 2');
+
+            var layerDigests = dockerManifest.layers.map(
+                function (l) {
+                    return l.digest;
+                }
+            );
+
+            var configDigest = dockerManifest.config.digest;
+            client.createBlobReadStream({digest: configDigest},
+                function (err, stream, ress) {
+                    if (err) {
+                        cb(err);
                         return;
                     }
-    
-                    importInfo = {
-                        repo: rat,
-                        tag: rat.tag,   // the requested tag
-                        tags: [rat.tag], // all the tags on that imgId
-                        imgId: dockerManifest.layers[dockerManifest.layers.length-1].digest,
-                        imgJson: imgJson,
-                        dockerManifest: dockerManifest,
-                        layerDigests: layerDigests,
-                        uuid: imgmanifest.imgUuidFromDockerDigests(layerDigests)
-                    };
-                    cb(null, importInfo);
-                }));
-    
-                // stream error handling
-                stream.on('error', function (err) {
-                   console.error('read stream error:', err);
-                   cb(err);
-                });
-    
-                stream.resume();
-            }
-        );
+                    stream.pipe(concat(function (buf) {
+                        var imgJsonq;
+                        try {
+                            imgJson = JSON.parse(buf.toString());
+                        } catch (ex) {
+                            cb(ex);
+                            return;
+                        }
+
+                        importInfo = {
+                            repo: rat,
+                            tag: rat.tag,   // the requested tag
+                            tags: [rat.tag], // all the tags on that imgId
+                            imgId: dockerManifest.layers[dockerManifest.layers.length-1].digest,
+                            imgJson: imgJson,
+                            dockerManifest: dockerManifest,
+                            layerDigests: layerDigests,
+                            uuid: imgmanifest.imgUuidFromDockerDigests(layerDigests)
+                        };
+                        cb(null, importInfo);
+                    }));
+
+                    // stream error handling
+                    stream.on('error', function (err) {
+                       console.error('read stream error:', err);
+                       cb(err);
+                    });
+
+                    stream.resume();
+                }
+            );
+        });
     });
 }
 

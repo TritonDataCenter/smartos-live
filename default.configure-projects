@@ -1,5 +1,5 @@
 illumos-extra: master: origin
-illumos: master: origin
+illumos: 17397: origin
 local/kbmd: master: origin
 local/kvm-cmd: master: origin
 local/kvm: master: origin

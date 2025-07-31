@@ -13,6 +13,7 @@
 #
 # Copyright 2021 Joyent, Inc.
 # Copyright 2025 MNX Cloud, Inc.
+# Copyright 2025 Edgecast Cloud LLC.
 #
 
 #
@@ -322,7 +323,6 @@ function bi_smf_seeds
 
 function bi_create_password
 {
-	local pwgen="$bi_wsroot/tools/pwgen"
 	local cryptpass="$bi_wsroot/tools/cryptpass"
 	local cp_password
 	local cp_hash
@@ -334,8 +334,9 @@ function bi_create_password
 
 		#
 		# Generate a random root password.
+		# Use pwgen(1) from pkgsrc. Spell out path to it for now.
 		#
-		if ! cp_password=$("$pwgen" -B -c -n 16 1) ||
+		if ! cp_password=$(/opt/local/bin/pwgen -B -c -n 16 1) ||
 		    [[ -z $cp_password ]]; then
 			fail 'unable to generate root password.'
 		fi

@@ -12,6 +12,7 @@
 #
 # Copyright 2022 Joyent, Inc.
 # Copyright 2025 MNX Cloud, Inc.
+# Copyright 2025 Edgecast Cloud LLC.
 #
 
 #
@@ -394,14 +395,9 @@ $(CTFTOOLS_TARBALL): 0-strap-stamp $(STAMPFILE)
 	(cd $(ROOT)/man/ && gmake install DESTDIR=$(PROTO) $(SUBDIR_DEFS))
 	touch $@
 
-0-tools-stamp: 0-pwgen-stamp
+0-tools-stamp:
 	(cd $(ROOT)/tools/builder && gmake builder)
 	(cd $(ROOT)/tools/format_image && gmake)
-	touch $@
-
-0-pwgen-stamp:
-	(cd ${ROOT}/tools/pwgen-* && autoconf && ./configure && \
-	    make && cp pwgen ${ROOT}/tools)
 	touch $@
 
 tools/cryptpass: src/cryptpass.c

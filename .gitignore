@@ -50,8 +50,6 @@
 /tools/format_image/format_image
 /tools/javascriptlint/build
 /tools/javascriptlint/spidermonkey/src/build
-/tools/pwgen
-/tools/pwgen-2.06/configure
 boot.manifest.d/
 boot.manifest.gen
 mancheck.conf
@@ -79,5 +77,3 @@ src/vm/node_modules/props.js
 src/zonememstat
 src/zonemon
 tests.manifest.gen
-tools/pwgen-2.06/Makefile
-tools/pwgen-2.06/autom4te.cache

@@ -14,7 +14,7 @@
 #
 # Copyright 2021 Joyent, Inc.
 # Copyright 2024 MNX Cloud, Inc.
-# Copyright 2025 Edgecast Cloud LLC
+# Copyright 2025 Edgecast Cloud LLC.
 #
 shopt -s xpg_echo
 unalias -a

@@ -224,6 +224,11 @@ function install_pkgin
 		    "failed to install $pkg"
 		fi
 	done
+
+	#
+	# Make sure we've upgraded all of our installed packages.
+	#
+	$conf_priv pkgin -y upgrade || fatal "failed installed-package upgrades"
 }
 
 function install_ips

@@ -8,6 +8,7 @@
 #
 # Copyright 2020 Joyent, Inc.
 # Copyright 2024 MNX Cloud, Inc.
+# Copyright 2025 Edgecast Cloud LLC.
 #
 
 #
@@ -97,7 +98,8 @@ BUILD_FILES="platform-${BRANCH}-${TIMESTAMP}.tgz
     configure-projects
     gitstatus.json
     index.html
-    md5sums.txt"
+    md5sums.txt
+    sha256sums.txt"
 for file in ${BUILD_FILES}; do
     mput -f ${BITS}/$file ${SMARTOS_RELEASE}/$file
 done

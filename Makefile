@@ -691,8 +691,7 @@ smartos-publish:
 		$(PLATFORM_BITS_DIR)
 	(cd $(PLATFORM_BITS_DIR) && \
 	    $(ROOT)/tools/smartos-index $(PLATFORM_TIMESTAMP) > index.html)
-	(cd $(PLATFORM_BITS_DIR) && \
-	    /usr/bin/sum -x md5 * > md5sums.txt)
+	(cd $(PLATFORM_BITS_DIR) && $(ROOT)/tools/generate-sums *)
 
 .PHONY: ctftools-publish
 ctftools-publish:

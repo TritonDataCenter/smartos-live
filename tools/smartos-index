@@ -8,6 +8,7 @@
 #
 # Copyright 2019 Joyent, Inc.
 # Copyright 2024 MNX Cloud, Inc.
+# Copyright 2025 Edgecast Cloud LLC.
 #
 
 #
@@ -28,4 +29,5 @@ for x in `ls * | grep -v index.html`; do
   echo "<a href=\"$x\">$x</a><br>"
 done
 echo "<a href=\"md5sums.txt\">md5sums.txt</a>"
+echo "<a href=\"sha256sums.txt\">sha256sums.txt</a>"
 echo "</body></html>"

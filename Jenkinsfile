@@ -6,7 +6,7 @@
 
 /*
  * Copyright 2022 Joyent, Inc.
- * Copyright 2024 MNX Cloud, Inc.
+ * Copyright 2025 MNX Cloud, Inc.
  */
 
 @Library('jenkins-joylib@v1.0.8') _
@@ -112,8 +112,9 @@ pipeline {
         stage('check') {
             agent {
                 node {
-                    label 'platform:true && image_ver:21.4.0 && pkgsrc_arch:x86_64 && ' +
-                    'dram:16gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:3'
+                    label 'platform:true && image_ver:24.4.1 && ' +
+                    'pkgsrc_arch:x86_64 && (dram:16gb || dram:32gb ) && ' +
+                    '!virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:3'
                     customWorkspace "workspace/smartos-${BRANCH_NAME}-check"
                 }
             }
@@ -157,8 +158,9 @@ set -o pipefail
                     // completes).
                     // Use ${BRANCH_NAME} instead.
                     node {
-                        label 'platform:true && image_ver:21.4.0 && pkgsrc_arch:x86_64 && ' +
-                        'dram:16gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:3'
+                        label 'platform:true && image_ver:24.4.1 && ' +
+                        'pkgsrc_arch:x86_64 && (dram:16gb || dram:32gb ) && ' +
+                        '!virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:3'
                         customWorkspace "workspace/smartos-${BRANCH_NAME}-default"
                     }
                 }
@@ -197,15 +199,16 @@ export ENGBLD_BITS_UPLOAD_IMGAPI=true
                             cleanWhenNotBuilt: true,
                             deleteDirs: true
                         joySlackNotifications(
-                            channel: 'smartos', comment: 'default')
+                            channel: 'cloud-smartos', comment: 'default')
                     }
                 }
             }
             stage('debug') {
                 agent {
                     node {
-                        label 'platform:true && image_ver:21.4.0 && pkgsrc_arch:x86_64 && ' +
-                            'dram:16gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:3'
+                        label 'platform:true && image_ver:24.4.1 && ' +
+                        'pkgsrc_arch:x86_64 && (dram:16gb || dram:32gb ) && ' +
+                        '!virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:3'
                         customWorkspace "workspace/smartos-${BRANCH_NAME}-debug"
                     }
                 }
@@ -246,15 +249,16 @@ export PLAT_CONFIGURE_ARGS="-d $PLAT_CONFIGURE_ARGS"
                             cleanWhenNotBuilt: true,
                             deleteDirs: true
                         joySlackNotifications(
-                            channel: 'smartos', comment: 'debug')
+                            channel: 'cloud-smartos', comment: 'debug')
                     }
                 }
             }
             stage('gcc14') {
                 agent {
                     node {
-                        label 'platform:true && image_ver:21.4.0 && pkgsrc_arch:x86_64 && ' +
-                            'dram:16gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:3'
+                        label 'platform:true && image_ver:24.4.1 && ' +
+                        'pkgsrc_arch:x86_64 && (dram:16gb || dram:32gb ) && ' +
+                        '!virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:3'
                         customWorkspace "workspace/smartos-${BRANCH_NAME}-gcc14"
                     }
                 }
@@ -292,15 +296,16 @@ export PLATFORM_DEBUG_SUFFIX=-gcc14
                             cleanWhenNotBuilt: true,
                             deleteDirs: true
                         joySlackNotifications(
-                            channel: 'smartos', comment: 'gcc14')
+                            channel: 'cloud-smartos', comment: 'gcc14')
                     }
                 }
             }
             stage('strap-cache') {
                 agent {
                     node {
-                        label 'platform:true && image_ver:21.4.0 && pkgsrc_arch:x86_64 && ' +
-                            'dram:16gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:3'
+                        label 'platform:true && image_ver:24.4.1 && ' +
+                        'pkgsrc_arch:x86_64 && (dram:16gb || dram:32gb ) && ' +
+                        '!virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:3'
                         customWorkspace "workspace/smartos-${BRANCH_NAME}-strap-cache"
                     }
                 }
@@ -335,7 +340,7 @@ export MANTA_TOOLS_PATH=/root/bin/
                             cleanWhenNotBuilt: true,
                             deleteDirs: true
                         joySlackNotifications(
-                            channel: 'smartos', comment: 'strap-cache')
+                            channel: 'cloud-smartos', comment: 'strap-cache')
                     }
                 }
             }
@@ -344,10 +349,9 @@ export MANTA_TOOLS_PATH=/root/bin/
     }
     post {
         always {
+            joySlackNotifications(comment: 'pipeline complete')
             joySlackNotifications(
-                channel: 'jenkins', comment: 'pipeline complete')
-            joySlackNotifications(
-                channel: 'smartos', comment: 'pipeline complete')
+                channel: 'cloud-smartos', comment: 'pipeline complete')
         }
     }
 }

@@ -13,6 +13,7 @@
 #
 # Copyright 2019 Joyent, Inc.
 # Copyright 2022 MNX Cloud, Inc.
+# Copyright 2025 Edgecast Cloud LLC.
 #
 
 #
@@ -30,7 +31,7 @@ ber_wsroot=$(cd "$(dirname "$0")/.." && pwd)
 ber_first=true
 
 ber_template="                     SmartOS %%VERSION%% x86_64
-                       Copyright %%YEAR%% MNX Cloud, Inc.
+                    Copyright %%YEAR%% Edgecast Cloud LLC.
 
   Built with the following components:
 "

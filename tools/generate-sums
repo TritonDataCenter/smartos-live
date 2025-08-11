@@ -1,0 +1,58 @@
+#!/bin/bash
+#
+# This file and its contents are supplied under the terms of the
+# Common Development and Distribution License ("CDDL"), version 1.0.
+# You may only use this file in accordance with the terms of version
+# 1.0 of the CDDL.
+#
+# A full copy of the text of the CDDL should have accompanied this
+# source.  A copy of the CDDL is also available via the Internet at
+# http://www.illumos.org/license/CDDL.
+#
+
+#
+# Copyright 2025 Edgecast Cloud LLC.
+#
+
+#
+# Generate md5sums.txt and sha256sums.txt.  We encapsulate the checksum file
+# generation here so we can improve upon it later.
+#
+# The checksum file format is:
+# - The name is <alg>sums.txt.  E.g. md5sums.txt, sha256sums.txt
+# - Each line is of the form:  HASH filename
+#
+# For example:
+#
+# shell$ head -2 md5sums.txt
+# 12f00ff447098e789dcf762df37d2d7a SINGLE_USER_ROOT_PASSWORD.txt
+# 64ec3efb00910a24817c5031055d4ce9 boot-release-20250724-20250724T001011Z.tgz
+# shell$
+#
+
+ALGS="md5 sha256"
+
+usage() {
+	echo "Usage: generate-sums file1 <file2 file3...>" > /dev/stdout
+	exit 1
+}
+
+[[ $# > 0 ]] || usage
+
+for alg in $ALGS; do
+	rm -f ${alg}sums.txt
+done
+
+for file in $*; do
+	# This *is* a file, right?
+	[[ -f $file ]] || usage
+
+	# Spawn digests in the background, use bash's wait, then move on.
+	# That way, both processes can perhaps exploit locality and ZFS ARC.
+	for alg in $ALGS; do
+		echo $(digest -a $alg $file) $file >> ${alg}sums.txt &
+	done
+	wait
+done
+
+exit 0

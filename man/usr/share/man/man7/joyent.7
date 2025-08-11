@@ -1,24 +1,41 @@
 '\" te
 .\"  Copyright (c) 2011, Joyent, Inc. All Rights Reserved
+.\"  Copyright 2025 Edgecast Cloud LLC.
 .\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License"). You may not use this file except in compliance with the License.
 .\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing. See the License for the specific language governing permissions and limitations under the License.
 .\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE. If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
 .TH joyent 7 "8 Mar 2011" "SunOS 5.11" "Standards, Environments, and Macros"
 .SH NAME
 joyent \- Joyent branded zone
+.sp
+joyent-minimal \- Joyent branded zone with fewer services
+.sp
+builder \- Joyent branded zone with extra device permissions
 .SH DESCRIPTION
 .sp
 .LP
-The \fBjoyent\fR brand uses the branded zones framework described in \fBbrands\fR(7) to implement Joyent SmartMachines.
+The \fBjoyent\fR brands use the branded zones framework described in
+\fBbrands\fR(7) to implement SmartOS native zones (originally called Joyent
+SmartMachines). They differ based on available services and/or device
+privileges.
+.sp
+The original \fBjoyent\fR brand implements a fully functioning SmartOS native
+zone. The \fBjoyent-minimal\fR brand reduces the amount of imported services
+down severely, more easily enabling a zone for a single purpose. The
+\fBbuilder\fR brand is identical to the \fBjoyent\fR brand except for
+additional device permissions, currently restricted to bhyve(8) testing and
+image construction, to build software or images that otherwise would require
+global zone privileges. All of the \fBjoyent\fR brands share identical
+properties apart from the aforementioned differences.
 .sp
 .LP
 .SS "Configuration and Administration"
 .sp
 .LP
-The \fBjoyent\fR brand supports a file system model similar to the now obsolete sparse root model. You cannot use the defunct \fBinherit-pkg-dir\fR resource with the \fBjoyent\fR brand, but the brand itself will share the /lib, /sbin and /usr directories with the global zone.  The brand provides zone-writable /lib/svc/manifest/site and /usr/local directories.
+The \fBjoyent\fR brands support a file system model similar to the now obsolete sparse root model. You cannot use the defunct \fBinherit-pkg-dir\fR resource with any \fBjoyent\fR brand, but the brand itself will share the /lib, /sbin and /usr directories with the global zone.  The brand provides zone-writable /lib/svc/manifest/site and /usr/local directories.
 .sp
 .LP
-The \fBjoyent\fR brand provides VNICs on-demand for exclusive stack zones.  When the zone boots, a VNIC will be created on the specified global-nic and destroyed when the zone shuts down.
+The \fBjoyent\fR brands provide VNICs on-demand for exclusive stack zones.  When the zone boots, a VNIC will be created on the specified global-nic and destroyed when the zone shuts down.
 .sp
 The following \fBnet\fR properties are supported by the brand:
 .sp
@@ -34,8 +51,10 @@ Blocks network traffic on the specified list of ports.
 
 .sp
 .LP
-The \fBzonecfg\fR(8) utility is used to configure an \fBjoyent\fR branded zone. Once a branded zone has been installed, that zone's brand cannot be changed or removed. The \fBzoneadm\fR(8) utility is used to report the zone's brand type and administer the zone. The \fBzlogin\fR(1) utility is used to log in to the zone.
-
+The \fBzonecfg\fR(8) utility can be used to configure any of the \fBjoyent\fR branded zones. Once a branded zone has been installed, that zone's brand cannot be changed or removed. The \fBzoneadm\fR(8) utility is used to report the zone's brand type and administer the zone. The \fBzlogin\fR(1) utility is used to log in to the zone.
+.sp
+In practice the \fBvmadm\fR(8) tool should be used to manage zones of any
+kind on SmartOS.
 .SH ATTRIBUTES
 .sp
 .LP
@@ -54,4 +73,4 @@ Interface StabilityEvolving
 .SH SEE ALSO
 .sp
 .LP
-\fBmdb\fR(1), \fBzlogin\fR(1), \fBzonename\fR(1), \fBbrands\fR(7), \fBzones\fR(7), \fBdtrace\fR(8), \fBzoneadm\fR(8), \fBzonecfg\fR(8)
+\fBmdb\fR(1), \fBzlogin\fR(1), \fBzonename\fR(1), \fBbrands\fR(7), \fBzones\fR(7), \fBdtrace\fR(8), \fBvmadm\fR(8), \fBzoneadm\fR(8), \fBzonecfg\fR(8)

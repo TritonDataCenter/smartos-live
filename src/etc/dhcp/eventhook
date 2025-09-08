@@ -18,6 +18,14 @@
 # This only applies in the global zone!
 [[ $(zonename) == global ]] || exit 0
 
+# We don't care which interface. If any GZ IPs have changed
+# then we want to update the sysinfo cache.
+#INTERFACE=$1
+
+# We only support this for the BOUND/BOUND6 actions.
+ACTION=$2
+[[ "$ACTION" == BOUND* ]] || exit 0
+
 # Refresh the sysinfo cache
 sysinfo -u
 

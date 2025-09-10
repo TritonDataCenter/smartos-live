@@ -354,6 +354,7 @@ LIBSDC_TARGETS = \
 	lib/sdc/zone.sh
 
 ETC_TARGETS = \
+	etc/dhcp/eventhook \
 	etc/nodename \
 	etc/rtc_config \
 	etc/ssh/sshd_config
@@ -401,7 +402,7 @@ install: all $(SUBDIRS)
 	cp -p $(LIBSDC_TARGETS) $(DESTDIR)/lib/sdc/
 	mkdir -p $(DESTDIR)/smartdc/lib
 	cp -p $(SMARTDC_LIB_TARGETS) $(DESTDIR)/smartdc/lib
-	mkdir -p $(DESTDIR)/etc/ssh $(DESTDIR)/etc/notices
+	mkdir -p $(DESTDIR)/etc/ssh $(DESTDIR)/etc/notices $(DESTDIR)/etc/dhcp
 	for file in $(ETC_TARGETS); do \
 		cp -r $$file $(DESTDIR)/$$file; \
 	done

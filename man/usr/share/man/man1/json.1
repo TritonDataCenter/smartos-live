@@ -326,9 +326,9 @@ Shortcut for \fB\-o json\fR\.
 .SH "EXAMPLES"
 A typical JSON REST API response:
 .
-.IP "" 4
+.IP "" 2
 .
-.nf
+.fi
 
 $ curl \-s http://ifconfig\.me/all\.json
 {"connection":"","ip_addr":"216\.57\.203\.67","lang":"","remote_host":\.\.\.
@@ -340,9 +340,9 @@ $ curl \-s http://ifconfig\.me/all\.json
 .P
 \fBNice output by default\fR:
 .
-.IP "" 4
+.IP "" 2
 .
-.nf
+.fi
 
 $ curl \-s http://ifconfig\.me/all\.json | json
 {
@@ -473,11 +473,12 @@ socket\.io
 .SS "Array processing with \-a"
 \fBjson\fR includes the \fB\-a\fR (aka \fB\-\-array\fR) option for \fBprocessing each element of an input JSON array independently\fR and \fBusing tabular output\fR\. Let\'s first get a list of open node\.js issues (note that this is a subset because of GH API pagination \fIhttp://developer\.github\.com/v3/#pagination\fR):
 .
-.IP "" 4
+.IP "" 2
 .
 .nf
 
-$ curl \-s https://api\.github\.com/repos/joyent/node/issues?state=open\e&per_page=100
+$ curl \-s https://api\.github\.com/repos/joyent/node/issues?state=open\e
+&per_page=100 
 [
   {
     "number": 3757,
@@ -497,12 +498,13 @@ $ curl \-s https://api\.github\.com/repos/joyent/node/issues?state=open\e&per_pa
 .P
 We can then print a table with just some fields as follows:
 .
-.IP "" 4
+.IP "" 2
 .
 .nf
 
-$ curl \-s https://api\.github\.com/repos/joyent/node/issues?state=open\e&per_page=100 \e
-    | json \-a comments number title
+$ curl \-s https://api\.github\.com/repos/joyent/node/issues?state=open\e
+&per_page=100\e | json \-a  comments number title
+.fi
 0 3757 readline: Remove event listeners on close
 0 3756 readline: No way to completely unhook interface from input/output
 1 3755 node\-v0\.6\.20 hello example segfaults on RaspberryPi (w/Arch + bash)
@@ -519,12 +521,13 @@ $ curl \-s https://api\.github\.com/repos/joyent/node/issues?state=open\e&per_pa
 .P
 Ultimately this can be useful for then using other command\-line tools\. For example, we could get the list of top\-five most commented open node issues:
 .
-.IP "" 4
+.IP "" 2
 .
 .nf
 
-$ curl \-s https://api\.github\.com/repos/joyent/node/issues?state=open\e&per_page=100 \e
-    | json \-a comments number title | sort \-n  | tail \-5
+$ curl \-s https://api\.github\.com/repos/joyent/node/issues?state=open\e
+&per_page=100\e | json \-a comments number title | sort \-n  | tail \-5 
+.fi
 9 3510 Automatically `\.toString()` functions in REPL\.
 11 3668 JSON documentation index listing
 12 3624 Add a return value to Buffer\.write* methods that returns the \.\.\.
@@ -538,9 +541,9 @@ $ curl \-s https://api\.github\.com/repos/joyent/node/issues?state=open\e&per_pa
 .P
 Or get a breakdown by ISO language code of the recent tweets mentioning "nodejs":
 .
-.IP "" 4
+.IP "" 2
 .
-.nf
+.fi
 
 $ curl \-s http://search\.twitter\.com/search\.json?q=nodejs\e&rpp=100 \e
     | json results | json \-a iso_language_code | sort | uniq \-c | sort
@@ -559,7 +562,7 @@ $ curl \-s http://search\.twitter\.com/search\.json?q=nodejs\e&rpp=100 \e
 .P
 The \fB\fB\-d\fR option can be used to specify a delimiter\fR:
 .
-.IP "" 4
+.IP "" 2
 .
 .nf
 
@@ -641,7 +644,7 @@ You can use the \'\-o MODE\' option (or \'\-\-output MODE\') to control the outp
 .
 .IP "" 4
 .
-.nf
+.fi
 
 $ echo \'[{"name": "Trent"},{"name": "Ewan"}]\' | json
 [

@@ -96,20 +96,23 @@ supplied channel.
             -v, --verbose             Verbose output. List source URL and TYPE.
             -j, --json                List sources as JSON.
 
-            -a <source>               Add a source. It is appended to the list of
-                                      sources.
+            -a <source>               Add a source. It is appended to the list 
+                                      of sources.
             -d <source>               Delete a source.
             -e                        Edit sources in an editor.
             -c, --check               Ping check all sources.
 
-            -t <type>, --type=<type>  The source type for an added source. One of
-                                      "imgapi" (the default), "docker" (deprecated),
+            -t <type>, --type=<type>  The source type for an added source. One 
+                                      of "imgapi" (the default), "docker" 
+                                      (deprecated),
                                       or "dsapi" (deprecated).
-            -k, --insecure            Allow insecure (no server certificate checking)
-                                      access to the added HTTPS source URL.
-            -f, --force               Force no "ping check" on new source URLs. By
-                                      default a ping check is done against new source
-                                      URLs to attempt to ensure they are a running
+            -k, --insecure            Allow insecure (no server certificate 
+                                      checking) access to the added HTTPS 
+                                      source URL.
+            -f, --force               Force no "ping check" on new source URLs.
+                                      By default a ping check is done against 
+                                      new source URLs to attempt to ensure they
+                                      are a running
                                       IMGAPI server.
 
         Examples:
@@ -128,8 +131,9 @@ supplied channel.
             -h, --help                Show this help.
             -j, --json                JSON output.
             -H                        Do not print table header row.
-            -o FIELD,...              Specify fields (columns) to output. Default is
-                                      "uuid,name,version,os,published".
+            -o FIELD,...              Specify fields (columns) to output. 
+                                      Default is "uuid,name,version,os,
+                                      published".
             -s FIELD,...              Sort on the given fields. Default is
                                       "published_at,name".
 
@@ -138,9 +142,11 @@ supplied channel.
             following computed fields for convenience.
 
             published_date            just the date part of `published_at`
-            published                 `published_at` with the milliseconds removed
+            published                 `published_at` with the milliseconds 
+                                      removed
             source                    the source URL, if available
-            clones                    the number of clones (dependent images and VMs)
+            clones                    the number of clones (dependent images and
+                                      VMs)
             size                      the size, in bytes, of the image file
 
             In addition if this is a docker image, then the following:
@@ -149,7 +155,8 @@ supplied channel.
             docker_short_id           the short 12 character docker id
             docker_repo               the docker repo from which this image
                                       originates, if available
-            docker_tags               a JSON array of docker repo tags, if available
+            docker_tags               a JSON array of docker repo tags, if 
+                                      available
 
 
     imgadm show <uuid|docker-repo-tag>
@@ -171,8 +178,8 @@ supplied channel.
             -q, --quiet               Disable progress bar.
             -C <channel>              Override the channel used for all sources
                                       when looking for images.
-            -P <pool>                 Name of zpool in which to look for the image.
-                                      Default is "zones".
+            -P <pool>                 Name of zpool in which to look for the 
+                                      image.  Default is "zones".
             -S <url>                  Specify the URL from which to import the
                                       image. The URL may include a '?channel='
                                       parameter, but note that the -C argument,
@@ -203,11 +210,13 @@ supplied channel.
             -h, --help                Show this help.
             -j, --json                JSON output.
             -H                        Do not print table header row.
-            -o FIELD,...              Specify fields (columns) to output. Default is
-                                      "uuid,name,version,os,published".
+            -o FIELD,...              Specify fields (columns) to output. 
+                                      Default is "uuid,name,version,os,
+                                      published".
             -s FIELD,...              Sort on the given fields. Default is
                                       "published_at,name".
-            --docker                  Limit and format list similar to `docker images`.
+            --docker                  Limit and format list similar to `docker 
+                                      images`.
 
         Filters:
             FIELD=VALUE               exact string match
@@ -219,9 +228,11 @@ supplied channel.
             following computed fields for convenience.
 
             published_date            just the date part of `published_at`
-            published                 `published_at` with the milliseconds removed
+            published                 `published_at` with the milliseconds remo
+                                      ved
             source                    the source URL, if available
-            clones                    the number of clones (dependent images and VMs)
+            clones                    the number of clones (dependent images and
+                                      VMs)
             size                      the size, in bytes, of the image file
 
             In addition if this is a docker image, then the following:
@@ -230,7 +241,8 @@ supplied channel.
             docker_short_id           the short 12 character docker id
             docker_repo               the docker repo from which this image
                                       originates, if available
-            docker_tags               a JSON array of docker repo tags, if available
+            docker_tags               a JSON array of docker repo tags, if 
+                                      available
 
 
     imgadm get [-P <pool>] <uuid>
@@ -275,19 +287,21 @@ supplied channel.
             -h, --help                Show this help.
             -j, --json                JSON output.
             -H                        Do not print table header row.
-            -o FIELD,...              Specify fields (columns) to output. Default is
-                                      "uuid,name,version,published".
-            -P <pool>                 Name of zpool in which to look for the image.
-                                      Default is "zones".
+            -o FIELD,...              Specify fields (columns) to output. 
+                                      Default is "uuid,name,version,published".
+            -P <pool>                 Name of zpool in which to look for the 
+                                      image.  Default is "zones".
 
         Fields for "-o":
             Any of the manifest fields (see `imgadm list -j` output) plus the
             following computed fields for convenience.
 
             published_date            just the date part of `published_at`
-            published                 `published_at` with the milliseconds removed
+            published                 `published_at` with the milliseconds 
+                                      removed
             source                    the source URL, if available
-            clones                    the number of clones (dependent images and VMs)
+            clones                    the number of clones (dependent images and
+                                      VMs)
             size                      the size, in bytes, of the image file
 
             In addition if this is a docker image, then the following:
@@ -296,7 +310,8 @@ supplied channel.
             docker_short_id           the short 12 character docker id
             docker_repo               the docker repo from which this image
                                       originates, if available
-            docker_tags               a JSON array of docker repo tags, if available
+            docker_tags               a JSON array of docker repo tags, if 
+                                      available
 
 
     imgadm delete [-P <pool>] <uuid>
@@ -320,29 +335,31 @@ supplied channel.
 
         Options:
             -h, --help                Show this help.
-            -n, --dry-run             Do a dry-run (do not actually make changes).
-            -f, --force               Force deletion without prompting for confirmation.
+            -n, --dry-run             Do a dry-run (do not actually make change
+                                      s).
+            -f, --force               Force deletion without prompting for 
+                                      confirmation.
 
     imgadm create [<options>] <vm-uuid> [<manifest-field>=<value> ...]
 
         Create an image from the given VM and manifest data.
 
         There are two basic calling modes: (1) a prepare-image script is
-        provided (via "-s") to have imgadm automatically run the script inside the
-        VM before image creation; or (2) the given VM is already "prepared" and
-        shutdown.
+        provided (via "-s") to have imgadm automatically run the script inside 
+        the VM before image creation; or (2) the given VM is already "prepared" 
+        and shutdown.
 
-        The former involves snapshotting the VM, running the prepare-image script
-        (via the SmartOS mdata operator-script facility), creating the image,
-        rolling back to the pre-prepared state. This is preferred because it is (a)
-        easier (fewer steps to follow for imaging) and (b) safe (gating with
-        snapshot/rollback ensures the VM is unchanged by imaging -- the preparation
-        script is typically destructive.
+        The former involves snapshotting the VM, running the prepare-image 
+        script (via the SmartOS mdata operator-script facility), creating the 
+        image, rolling back to the pre-prepared state. This is preferred because
+        it is (a) easier (fewer steps to follow for imaging) and (b) safe 
+        (gating with snapshot/rollback ensures the VM is unchanged by imaging --
+        the preparation script is typically destructive.
 
-        With the latter, one first creates a VM from an existing image, customizes
-        it, runs "sm-prepare-image" (or equivalent for KVM guest OSes), shuts it
-        down, runs this "imgadm create" to create the image file and manifest, and
-        finally destroys the "proto" VM.
+        With the latter, one first creates a VM from an existing image, 
+        customizes it, runs "sm-prepare-image" (or equivalent for KVM guest 
+        OSes), shuts it down, runs this "imgadm create" to create the image file
+        and manifest, and finally destroys the "proto" VM.
 
         With either calling mode, the image can optionally be published directly
         to a given image repository (IMGAPI) via "-p URL". This can also be
@@ -369,8 +386,9 @@ supplied channel.
                            then "PATH.imgmanifest" and "PATH.zfs[.EXT]" are
                            created.
             -c <comp>, --compression=<comp>
-                           One of "none", "gzip", "bzip2" or "xz" for the compression
-                           to use on the image file, if any. Default is "none".
+                           One of "none", "gzip", "bzip2" or "xz" for the 
+                           compression to use on the image file, if any.
+                           Default is "none".
             -i             Build an incremental image (based on the "@final"
                            snapshot of the source image for the VM).
 
@@ -511,27 +529,28 @@ and list all Docker images (including intermediate layers) with:
 
 A subset of the full Docker "image json" metadata is stored as "docker:*"
 tags on the image. E.g. for the current "busybox:latest":
+```
+...
+"tags": {
+  "docker:id": 
+             "4986bf8c15363d1c5d15512d5266f8777bfba4974ac56e3270e7760f6f0a8125",
+  "docker:architecture": "amd64",
+  "docker:repo": "docker.io/library/busybox",
+  "docker:tag:buildroot-2014.02": true,
+  "docker:tag:latest": true,
+  "docker:config": {
+    "Cmd": [
+      "/bin/sh"
+    ],
+    "Entrypoint": null,
+    "Env": [
+      "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+    ],
+    "WorkingDir": ""
+  }
+...
 
-    ...
-    "tags": {
-      "docker:id": "4986bf8c15363d1c5d15512d5266f8777bfba4974ac56e3270e7760f6f0a8125",
-      "docker:architecture": "amd64",
-      "docker:repo": "docker.io/library/busybox",
-      "docker:tag:buildroot-2014.02": true,
-      "docker:tag:latest": true,
-      "docker:config": {
-        "Cmd": [
-          "/bin/sh"
-        ],
-        "Entrypoint": null,
-        "Env": [
-          "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-        ],
-        "WorkingDir": ""
-      }
-    ...
-
-
+```
 ## COMPATIBILITY NOTES
 
 Version 3 of "imgadm" added Docker image support. This involved a significant

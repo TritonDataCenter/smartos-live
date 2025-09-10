@@ -29,7 +29,8 @@ ACTION=$2
 # Refresh the sysinfo cache
 sysinfo -u
 
-# Restart any affected services that depend on sysinfo
+# Restart any affected services currently known to depend on binding to the
+# Admin_IP obtained from sysinfo.
 # (Note that if any of these services do not exist
 # then they just won't show up on stdout.)
 svcs -Ho fmri vmadmd smartos-ui smartos-ui-executor | while read -r service

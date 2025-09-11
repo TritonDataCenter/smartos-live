@@ -158,6 +158,15 @@ tab-complete UUIDs rather than having to type them out for every command.
             The IP, port and VNC display number for the TCP socket we're
             listening on for this VM. If VNC is enabled.
 
+      kill [-s SIGNAL|-SIGNAL] <uuid>
+
+        This command sends a specified SIGNAL to a VM init process. If no
+        signal is specified then SIGTERM is sent.
+
+        The SIGNAL could be specified by its number or by name. When specified
+        by name, both forms with or without SIG- prefix are recognized.
+
+          -s, --signal=SIGNAL, -SIGNAL      Selects a SIGNAL to be sent.
 
       list [-p] [-H] [-o field,...] [-s field,...] [field=value ...]
 
@@ -258,12 +267,37 @@ tab-complete UUIDs rather than having to type them out for every command.
         reboot will be much faster but will not necessarily give the VM any
         time to shut down its processes.
 
+      receive [-f <filename>]
+
+        This command completes a cold/non-live VM migration, which is done
+        via the VM dataset(s) and its manifest sending and receiving.
+
+        Internally, the migration implies:
+
+        Source side: stop the VM, enumerate VM datasets and filesystems, make
+        a ZFS snapshot and send it to a file for each of the datasets, delete
+        ZFS snapshots, export a VM defnition into JSON file, transfer all
+        files to the target system.
+
+        Destination side: receive ZFS datasets from files, receive a JSON VM
+        manifest from file, install the VM.
+
+      reprovision <uuid> [-f <filename>]
+
+        This command reprovisions existing VM.
+
+        Internally, this implies: stop the VM, mark the zone as in transition,
+        rename zone's dataset(s), create new root dataset, copy zone's
+        configuration files, remount cores dataset, destroy old root dataset,
+        run a relevant brand init script, update metadata, start the VM, unset
+        transition flag.
+
       rollback-snapshot <uuid> <snapname>
 
         Support for snapshots is currently experimental. It only works for bhyve
         VMs and OS VMs which also have no additional datasets.
 
-        This command rolls the dataset backing the the VM with the specified
+        This command rolls the dataset backing the VM with the specified
         uuid back to its state at the point when the snapshot with snapname was
         taken. You cannot undo this except by rolling back to an even older
         snapshot if one exists.
@@ -277,6 +311,22 @@ tab-complete UUIDs rather than having to type them out for every command.
 
         See the 'SNAPSHOTS' section below for some more details on how to use
         these snapshots, and their restrictions.
+
+      send <uuid> [target]
+
+        This command initiates a cold/non-live VM migration, which is done
+        via the VM dataset(s) and its manifest sending and receiving.
+        The target could be a file redirect or a pipe to a remote host.
+
+        Internally, the migration implies:
+
+        Source side: stop the VM, enumerate VM datasets and filesystems, make
+        a ZFS snapshot and send it to a file for each of the datasets, delete
+        ZFS snapshots, export a VM defnition into JSON file, transfer all
+        files to the target system.
+
+        Destination side: receive ZFS datasets from files, receive a JSON VM
+        manifest from file, install the VM.
 
       start <uuid> [option=value ...]
 
@@ -401,7 +451,7 @@ tab-complete UUIDs rather than having to type them out for every command.
         If you pass in a JSON object, that object should be formatted in the
         same manner as a create payload. The only exception is with fields
         that are themselves objects: VM NICs, KVM VM disks, customer_metadata,
-        internal_metadata, tags and routes.  In the the case of the "simple"
+        internal_metadata, tags and routes.  In the case of the "simple"
         properties 'tags', 'customer_metadata', 'internal_metadata' and
         'routes' which are key-value pairs, there are 2 special payload members:
 
@@ -1625,7 +1675,7 @@ tab-complete UUIDs rather than having to type them out for every command.
 
     nics.*.interface:
 
-        This is the interface name the the VM will see for this interface. It
+        This is the interface name the VM will see for this interface. It
         will always be in the format netX where X is an integer >= 0.
 
         type: string (netX)
@@ -2625,7 +2675,7 @@ stopping
   Possible For: state
 
   This is a state which only exists for HVM VMs. When we have sent a
-  system_powerdown message to qemu via QMP we will mark the the VM as
+  system_powerdown message to qemu via QMP we will mark the VM as
   being in state 'stopping' until either the shutdown times out and we
   halt the zone, or the VM reaches zone\_state 'installed'.
 

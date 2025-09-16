@@ -1072,6 +1072,8 @@ s usr/lib/amd64/libdemangle.so=libdemangle.so.1
 f usr/lib/amd64/libiostream.so.1 0755 root bin
 # 0-livesrc-stamp
 f .smartdc_version 0444 root root
+d etc/dhcp 0755 root sys
+f etc/dhcp/eventhook 0755 root sys
 d etc/ssh 0755 root sys
 f etc/ssh/sshd_config 0644 root sys
 f etc/rtc_config 0644 root root

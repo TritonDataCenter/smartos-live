@@ -14,6 +14,7 @@
 #
 # Copyright 2021 Joyent, Inc.
 # Copyright 2024 MNX Cloud, Inc.
+# Copyright 2025 Edgecast Cloud LLC.
 #
 shopt -s xpg_echo
 unalias -a
@@ -201,12 +202,17 @@ function install_pkgin
 {
 	local pkglist
 
-	pkglist="build-essential flex libxslt openjdk11 nodejs"
+	pkglist="build-essential flex libxslt openjdk11 nodejs pwgen"
 	pkglist="$pkglist p5-XML-Parser gettext python27 python312"
 	pkglist="$pkglist coreutils gsed pkg_alternatives cdrtools"
 	pkglist="$pkglist nasm pigz smartos-build-tools"
 
 	$conf_priv pkgin -f update || fatal "failed to update pkgsrc repository"
+
+	#
+	# Make sure we've upgraded all of our installed packages.
+	#
+	$conf_priv pkgin -y upgrade || fatal "failed installed-package upgrades"
 
 	#
 	# Remove legacy packages replaced by the smartos-build-tools package.

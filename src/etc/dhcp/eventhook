@@ -1,0 +1,39 @@
+#!/bin/bash
+
+#
+# This file and its contents are supplied under the terms of the
+# Common Development and Distribution License ("CDDL"), version 1.0.
+# You may only use this file in accordance with the terms of version
+# 1.0 of the CDDL.
+#
+# A full copy of the text of the CDDL should have accompanied this
+# source.  A copy of the CDDL is also available via the Internet at
+# http://www.illumos.org/license/CDDL.
+#
+
+#
+# Copyright 2025 Edgecast Cloud LLC.
+#
+
+# This only applies in the global zone!
+[[ $(zonename) == global ]] || exit 0
+
+# We don't care which interface. If any GZ IPs have changed
+# then we want to update the sysinfo cache.
+#INTERFACE=$1
+
+# We only support this for the BOUND/BOUND6 actions.
+ACTION=$2
+[[ "$ACTION" == BOUND* ]] || exit 0
+
+# Refresh the sysinfo cache
+sysinfo -u
+
+# Restart any affected services currently known to depend on binding to the
+# Admin_IP obtained from sysinfo.
+# (Note that if any of these services do not exist
+# then they just won't show up on stdout.)
+svcs -Ho fmri vmadmd smartos-ui smartos-ui-executor | while read -r service
+do
+	svcadm restart "$service"
+done

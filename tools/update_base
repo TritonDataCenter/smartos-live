@@ -22,6 +22,7 @@
 # CDDL HEADER END
 #
 # Copyright 2018 Joyent, Inc.
+# Copyright 2025 Edgecast Cloud LLC.
 #
 
 #
@@ -34,7 +35,7 @@ upd_root=$(pwd)
 upd_extra_stamp="$upd_root/0-strap-stamp $upd_root/0-extra-stamp"
 upd_illumos_stamp="$upd_root/0-illumos-stamp $upd_root/0-extra-stamp"
 upd_live_stamp="$upd_root/0-livesrc-stamp $upd_root/0-man-stamp"
-upd_live_stamp="$upd_live_stamp $upd_root/0-tools-stamp $upd_root/0-pwgen-stamp"
+upd_live_stamp="$upd_live_stamp $upd_root/0-tools-stamp"
 upd_live_stamp="$upd_live_stamp $upd_root/0-builder-stamp"
 
 function fail

@@ -2682,6 +2682,10 @@ function main()
                             });
                         } else {
                             log.debug('ignoring non-kvm VM ' + vmobj.uuid);
+                            // Still spawn console proxy for non-KVM running VMs
+                            if (vmobj.state === 'running' || vmobj.zone_state === 'running') {
+                                spawnConsoleProxy(vmobj);
+                            }
                             upg_cb();
                         }
                     }

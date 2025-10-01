@@ -452,27 +452,28 @@ function spawnConsoleProxy(vmobj)
         // KVM uses unix socket for serial console
         consolePath = path.join(zonepath, '/root/tmp/vm.console');
     } else {
-        // Bhyve, Joyent, LX, etc. use zone console device
-        consolePath = '/dev/zcons/' + vmobj.zonename + '/zoneconsole';
+        // Bhyve, Joyent, LX, etc. use zoneadmd console socket
+        consolePath = '/var/run/zones/' + vmobj.zonename + '.console_sock';
     }
 
-    // Create TCP server that proxies to console (socket or device)
+    // Create TCP server that proxies to console socket
     server = net.createServer(function (c) {
-        var consoleRead;
-        var consoleWrite;
+        var console = net.Stream();
         var remote_address = '';
+
+        c.pipe(console);
+        console.pipe(c);
 
         remote_address = '[' + c.remoteAddress + ']:' + c.remotePort;
 
         c.on('close', function (had_error) {
             log.info('console connection ended from ' + remote_address +
                 ' for VM ' + vmobj.uuid);
-            if (consoleRead) {
-                consoleRead.destroy();
-            }
-            if (consoleWrite) {
-                consoleWrite.destroy();
-            }
+        });
+
+        console.on('error', function (err) {
+            log.warn('console socket error for VM ' + vmobj.uuid +
+                ': ' + err.message);
         });
 
         c.on('error', function (err) {
@@ -480,53 +481,8 @@ function spawnConsoleProxy(vmobj)
                 ': ' + err.message);
         });
 
-        if (vmobj.brand === 'kvm') {
-            // KVM uses unix socket - use net.Stream
-            var console = net.Stream();
-
-            c.pipe(console);
-            console.pipe(c);
-
-            console.on('error', function (err) {
-                log.warn('console socket error for VM ' + vmobj.uuid +
-                    ': ' + err.message);
-                c.end();
-            });
-
-            console.connect(consolePath);
-        } else {
-            // Other brands use zone console device - spawn socat to proxy it
-            var socat = cp.spawn('/usr/bin/socat', [
-                '-',
-                'OPEN:' + consolePath + ',raw,echo=0'
-            ], {
-                stdio: ['pipe', 'pipe', 'pipe']
-            });
-
-            socat.on('error', function (err) {
-                log.error('socat spawn error for VM ' + vmobj.uuid +
-                    ': ' + err.message);
-                c.end();
-            });
-
-            socat.on('exit', function (code, signal) {
-                log.info('socat exited for VM ' + vmobj.uuid +
-                    ' (code: ' + code + ', signal: ' + signal + ')');
-                c.end();
-            });
-
-            socat.stderr.on('data', function (data) {
-                log.warn('socat stderr for VM ' + vmobj.uuid + ': ' + data);
-            });
-
-            // Pipe bidirectionally
-            socat.stdout.pipe(c);
-            c.pipe(socat.stdin);
-
-            c.on('end', function () {
-                socat.kill();
-            });
-        }
+        // Connect to console socket
+        console.connect(consolePath);
     });
 
     log.info('spawning console listener for ' + vmobj.uuid +
@@ -548,7 +504,7 @@ function spawnConsoleProxy(vmobj)
             'host': SDC.sysinfo.admin_ip,
             'port': addr.port,
             'server': server,
-            'type': vmobj.brand === 'kvm' ? 'socket' : 'zcons',
+            'type': 'socket',
             'path': consolePath
         };
 

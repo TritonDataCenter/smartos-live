@@ -458,22 +458,21 @@ function spawnConsoleProxy(vmobj)
 
     // Create TCP server that proxies to console (socket or device)
     server = net.createServer(function (c) {
-        var console = net.Stream();
+        var consoleRead;
+        var consoleWrite;
         var remote_address = '';
-
-        c.pipe(console);
-        console.pipe(c);
 
         remote_address = '[' + c.remoteAddress + ']:' + c.remotePort;
 
         c.on('close', function (had_error) {
             log.info('console connection ended from ' + remote_address +
                 ' for VM ' + vmobj.uuid);
-        });
-
-        console.on('error', function (err) {
-            log.warn('console socket/device error for VM ' + vmobj.uuid +
-                ': ' + err.message);
+            if (consoleRead) {
+                consoleRead.destroy();
+            }
+            if (consoleWrite) {
+                consoleWrite.destroy();
+            }
         });
 
         c.on('error', function (err) {
@@ -481,8 +480,41 @@ function spawnConsoleProxy(vmobj)
                 ': ' + err.message);
         });
 
-        // Connect to console (unix socket for KVM, device file for others)
-        console.connect(consolePath);
+        if (vmobj.brand === 'kvm') {
+            // KVM uses unix socket - use net.Stream
+            var console = net.Stream();
+
+            c.pipe(console);
+            console.pipe(c);
+
+            console.on('error', function (err) {
+                log.warn('console socket error for VM ' + vmobj.uuid +
+                    ': ' + err.message);
+                c.end();
+            });
+
+            console.connect(consolePath);
+        } else {
+            // Other brands use zone console device - use fs streams
+            consoleRead = fs.createReadStream(consolePath);
+            consoleWrite = fs.createWriteStream(consolePath);
+
+            consoleRead.on('error', function (err) {
+                log.warn('console read error for VM ' + vmobj.uuid +
+                    ': ' + err.message);
+                c.end();
+            });
+
+            consoleWrite.on('error', function (err) {
+                log.warn('console write error for VM ' + vmobj.uuid +
+                    ': ' + err.message);
+                c.end();
+            });
+
+            // Pipe bidirectionally
+            consoleRead.pipe(c);
+            c.pipe(consoleWrite);
+        }
     });
 
     log.info('spawning console listener for ' + vmobj.uuid +

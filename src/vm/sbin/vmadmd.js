@@ -460,9 +460,8 @@ function spawnConsoleProxy(vmobj)
     server = net.createServer(function (c) {
         var console = net.Stream();
         var remote_address = '';
-
-        c.pipe(console);
-        console.pipe(c);
+        var isKvm = (vmobj.brand === 'kvm');
+        var handshakeDone = isKvm; // KVM doesn't need handshake
 
         remote_address = '[' + c.remoteAddress + ']:' + c.remotePort;
 
@@ -480,6 +479,32 @@ function spawnConsoleProxy(vmobj)
             log.warn('console net socket error for VM ' + vmobj.uuid +
                 ': ' + err.message);
         });
+
+        // For non-KVM, wait for handshake before piping
+        if (!isKvm) {
+            console.once('connect', function () {
+                // Send zlogin-C handshake: IDENT <locale> <flags>\n
+                console.write('IDENT C 0\n');
+
+                // Wait for OK response before starting data flow
+                console.once('data', function (data) {
+                    if (data.toString().indexOf('OK') === 0) {
+                        handshakeDone = true;
+                        // Now start bidirectional pipe
+                        c.pipe(console);
+                        console.pipe(c);
+                    } else {
+                        log.error('console handshake failed for VM ' + vmobj.uuid +
+                            ': ' + data.toString());
+                        c.end();
+                    }
+                });
+            });
+        } else {
+            // KVM: pipe immediately
+            c.pipe(console);
+            console.pipe(c);
+        }
 
         // Connect to console socket
         console.connect(consolePath);

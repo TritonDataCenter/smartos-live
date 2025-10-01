@@ -458,56 +458,93 @@ function spawnConsoleProxy(vmobj)
 
     // Create TCP server that proxies to console socket
     server = net.createServer(function (c) {
-        var console = net.Stream();
+        var consoleSocket = new net.Socket();
         var remote_address = '';
         var isKvm = (vmobj.brand === 'kvm');
-        var handshakeDone = isKvm; // KVM doesn't need handshake
+        var handshakeDone = false;
+        var handshakeTimer = null;
+        var cleanedUp = false;
 
         remote_address = '[' + c.remoteAddress + ']:' + c.remotePort;
+
+        // Cleanup function ensures all resources are properly released
+        function cleanup() {
+            if (cleanedUp) {
+                return;
+            }
+            cleanedUp = true;
+
+            if (handshakeTimer) {
+                clearTimeout(handshakeTimer);
+                handshakeTimer = null;
+            }
+
+            if (consoleSocket && !consoleSocket.destroyed) {
+                consoleSocket.destroy();
+            }
+        }
 
         c.on('close', function (had_error) {
             log.info('console connection ended from ' + remote_address +
                 ' for VM ' + vmobj.uuid);
+            cleanup();
         });
 
-        console.on('error', function (err) {
+        consoleSocket.on('error', function (err) {
             log.warn('console socket error for VM ' + vmobj.uuid +
                 ': ' + err.message);
+            cleanup();
+            c.end();
         });
 
         c.on('error', function (err) {
             log.warn('console net socket error for VM ' + vmobj.uuid +
                 ': ' + err.message);
+            cleanup();
         });
 
-        // For non-KVM, wait for handshake before piping
+        // For non-KVM brands, perform zoneadmd console handshake
         if (!isKvm) {
-            console.once('connect', function () {
+            // Set timeout for handshake completion
+            handshakeTimer = setTimeout(function() {
+                if (!handshakeDone) {
+                    log.error('console handshake timeout for VM ' + vmobj.uuid);
+                    cleanup();
+                    c.end();
+                }
+            }, 5000);
+
+            consoleSocket.once('connect', function () {
                 // Send zlogin-C handshake: IDENT <locale> <flags>\n
-                console.write('IDENT C 0\n');
+                consoleSocket.write('IDENT C 0\n');
 
                 // Wait for OK response before starting data flow
-                console.once('data', function (data) {
+                consoleSocket.once('data', function (data) {
+                    clearTimeout(handshakeTimer);
+                    handshakeTimer = null;
+
                     if (data.toString().indexOf('OK') === 0) {
                         handshakeDone = true;
                         // Now start bidirectional pipe
-                        c.pipe(console);
-                        console.pipe(c);
+                        c.pipe(consoleSocket);
+                        consoleSocket.pipe(c);
                     } else {
                         log.error('console handshake failed for VM ' + vmobj.uuid +
-                            ': ' + data.toString());
+                            ': ' + data.toString().substring(0, 100));
+                        cleanup();
                         c.end();
                     }
                 });
             });
         } else {
-            // KVM: pipe immediately
-            c.pipe(console);
-            console.pipe(c);
+            // KVM brand: pipe immediately (no handshake needed)
+            handshakeDone = true;
+            c.pipe(consoleSocket);
+            consoleSocket.pipe(c);
         }
 
         // Connect to console socket
-        console.connect(consolePath);
+        consoleSocket.connect(consolePath);
     });
 
     log.info('spawning console listener for ' + vmobj.uuid +

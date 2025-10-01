@@ -495,25 +495,37 @@ function spawnConsoleProxy(vmobj)
 
             console.connect(consolePath);
         } else {
-            // Other brands use zone console device - use fs streams
-            consoleRead = fs.createReadStream(consolePath);
-            consoleWrite = fs.createWriteStream(consolePath);
+            // Other brands use zone console device - spawn socat to proxy it
+            var socat = cp.spawn('/usr/bin/socat', [
+                '-',
+                'OPEN:' + consolePath + ',raw,echo=0'
+            ], {
+                stdio: ['pipe', 'pipe', 'pipe']
+            });
 
-            consoleRead.on('error', function (err) {
-                log.warn('console read error for VM ' + vmobj.uuid +
+            socat.on('error', function (err) {
+                log.error('socat spawn error for VM ' + vmobj.uuid +
                     ': ' + err.message);
                 c.end();
             });
 
-            consoleWrite.on('error', function (err) {
-                log.warn('console write error for VM ' + vmobj.uuid +
-                    ': ' + err.message);
+            socat.on('exit', function (code, signal) {
+                log.info('socat exited for VM ' + vmobj.uuid +
+                    ' (code: ' + code + ', signal: ' + signal + ')');
                 c.end();
+            });
+
+            socat.stderr.on('data', function (data) {
+                log.warn('socat stderr for VM ' + vmobj.uuid + ': ' + data);
             });
 
             // Pipe bidirectionally
-            consoleRead.pipe(c);
-            c.pipe(consoleWrite);
+            socat.stdout.pipe(c);
+            c.pipe(socat.stdin);
+
+            c.on('end', function () {
+                socat.kill();
+            });
         }
     });
 

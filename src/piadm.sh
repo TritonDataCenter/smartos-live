@@ -14,6 +14,7 @@
 #
 # Copyright 2022 Joyent, Inc.
 # Copyright 2025 MNX Cloud, Inc.
+# Copyright 2025 Edgecast Cloud LLC.
 #
 
 # shellcheck disable=1091
@@ -32,7 +33,7 @@ err() {
 fatal() {
 	eecho
 	if [[ -n "$1" ]]; then
-		eecho "ERROR: $1"
+		eecho "ERROR: $@"
 	fi
 	eecho
 	exit 2

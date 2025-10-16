@@ -32,7 +32,7 @@ err() {
 fatal() {
 	eecho
 	if [[ -n "$1" ]]; then
-		eecho "ERROR: $1"
+		eecho "ERROR: $@"
 	fi
 	eecho
 	exit 2

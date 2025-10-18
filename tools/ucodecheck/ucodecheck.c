@@ -148,11 +148,6 @@ ucc_read_proto(ucodecheck_t *ucc, const char *dir)
 	struct dirent *dp;
 
 	if ((dirfd = openat(ucc->ucc_proto_dir, dir, O_RDONLY)) < 0) {
-		err(EXIT_FAILURE, "failed to open proto directory %s, current "
-		    "root is at %s", dir, ucc->ucc_proto_path);
-	}
-
-	if ((d = fdopendir(dirfd)) == NULL) {
 		/*
 		 * If it's the AMD fallback directory, return nicely and let
 		 * ucc_check_proto() do its thing instead.
@@ -161,6 +156,11 @@ ucc_read_proto(ucodecheck_t *ucc, const char *dir)
 			warn("\tAMD fallback directory not in proto.\n");
 			return;
 		}
+		err(EXIT_FAILURE, "failed to open proto directory %s, current "
+		    "root is at %s", dir, ucc->ucc_proto_path);
+	}
+
+	if ((d = fdopendir(dirfd)) == NULL) {
 		err(EXIT_FAILURE, "failed to turn proto fd dir to DIR *");
 	}
 

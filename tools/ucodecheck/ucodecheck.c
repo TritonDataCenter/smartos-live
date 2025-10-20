@@ -153,7 +153,8 @@ ucc_read_proto(ucodecheck_t *ucc, const char *dir)
 		 * ucc_check_proto() do its thing instead.
 		 */
 		if (dir == amd_ucodedir_fallback) {
-			warn("\tAMD fallback directory not in proto.\n");
+			fprintf(stderr,
+			    "  (AMD fallback directory not in proto.)  ");
 			return;
 		}
 		err(EXIT_FAILURE, "failed to open proto directory %s, current "

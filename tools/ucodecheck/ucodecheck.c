@@ -11,6 +11,7 @@
 
 /*
  * Copyright 2019 Joyent, Inc.
+ * Copyright 2025 Edgecast Cloud LLC.
  */
 
 /*
@@ -43,6 +44,8 @@
 
 static const char *ucc_progname;
 static const char *amd_ucodedir = "platform/i86pc/ucode/AuthenticAMD";
+static const char *amd_ucodedir_fallback =
+    "platform/i86pc/ucode/AuthenticAMD/fallback";
 static const char *intc_ucodedir = "platform/i86pc/ucode/GenuineIntel";
 
 typedef struct ucodecheck {
@@ -82,9 +85,14 @@ ucc_manifest_cb(manifest_ent_t *me, void *arg)
 
 	static size_t intc_len = 0;
 	static size_t amd_len = 0;
+	static size_t amd_fallback_len = 0;
 
 	if (amd_len == 0) {
 		amd_len = strlen(amd_ucodedir);
+	}
+
+	if (amd_fallback_len == 0) {
+		amd_fallback_len = strlen(amd_ucodedir_fallback);
 	}
 
 	if (intc_len == 0) {
@@ -92,7 +100,8 @@ ucc_manifest_cb(manifest_ent_t *me, void *arg)
 	}
 
 	if (strncmp(amd_ucodedir, me->me_name, amd_len) != 0 &&
-	    strncmp(intc_ucodedir, me->me_name, intc_len) != 0) {
+	    strncmp(amd_ucodedir_fallback, me->me_name, amd_fallback_len) != 0
+	    && strncmp(intc_ucodedir, me->me_name, intc_len) != 0) {
 		return (MECB_NEXT);
 	}
 
@@ -139,6 +148,15 @@ ucc_read_proto(ucodecheck_t *ucc, const char *dir)
 	struct dirent *dp;
 
 	if ((dirfd = openat(ucc->ucc_proto_dir, dir, O_RDONLY)) < 0) {
+		/*
+		 * If it's the AMD fallback directory, return nicely and let
+		 * ucc_check_proto() do its thing instead.
+		 */
+		if (dir == amd_ucodedir_fallback) {
+			fprintf(stderr,
+			    "  (AMD fallback directory not in proto.)  ");
+			return;
+		}
 		err(EXIT_FAILURE, "failed to open proto directory %s, current "
 		    "root is at %s", dir, ucc->ucc_proto_path);
 	}
@@ -152,9 +170,14 @@ ucc_read_proto(ucodecheck_t *ucc, const char *dir)
 		ucode_ent_t *ent;
 		avl_index_t where;
 
+		/* Skip the obvious directory entries. */
 		if (strcmp(dp->d_name, ".") == 0)
 			continue;
 		if (strcmp(dp->d_name, "..") == 0)
+			continue;
+
+		/* Skip (special-case) the AMD fallback directory too. */
+		if (dir == amd_ucodedir && strcmp(dp->d_name, "fallback") == 0)
 			continue;
 
 		if (fstatat(dirfd, dp->d_name, &st, AT_SYMLINK_NOFOLLOW) != 0) {
@@ -323,6 +346,7 @@ main(int argc, char *argv[])
 	}
 
 	ucc_read_proto(&ucc, amd_ucodedir);
+	ucc_read_proto(&ucc, amd_ucodedir_fallback);
 	ucc_read_proto(&ucc, intc_ucodedir);
 
 	ucc_check_proto(&ucc);

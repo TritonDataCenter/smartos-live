@@ -6,7 +6,7 @@
   "repository": "https://github.com/joyent/node-zonename.git",
   "main": ".index.js",
   "dependencies": {
-    "nan": "^2.14.1"
+    "nan": "~2.14.1"
   },
   "scripts": {
     "install": "node-gyp configure build",

@@ -561,7 +561,8 @@ tab-complete UUIDs rather than having to type them out for every command.
         type -- type of the properties value.
 
         vmtype -- This value can be one of the following groups:
-                  - OS:  all types of OS VMs (joyent, joyent-minimal, builder, and lx)
+                  - OS:  all types of OS VMs (joyent, joyent-minimal, builder, 
+                         and lx)
                   - HVM: all types of HVM VMs (bhyve and kvm)
                   - ANY: all types of VMs
                   or an explicit brand name such as 'lx'.
@@ -692,8 +693,8 @@ tab-complete UUIDs rather than having to type them out for every command.
 
     brand:
 
-        This will be one of 'joyent', 'joyent-minimal', 'builder', or 'lx' for OS
-        virtualization, or 'kvm' or 'bhyve' for full hardware virtualization.
+        This will be one of 'joyent', 'joyent-minimal', 'builder', or 'lx' for 
+        OS virtualization, or 'kvm' or 'bhyve' for full hardware virtualization.
         This is a required value for VM creation.
 
         type: string (joyent|joyent-minimal|builder|lx|kvm|bhyve)
@@ -1662,7 +1663,8 @@ tab-complete UUIDs rather than having to type them out for every command.
         The interface for updating this field is liable to change in the
         future to make it easier to add or remove addresses.
 
-        type: array (of IP addresses with routing prefixes, 'dhcp' or 'addrconf')
+        type: array (of IP addresses with routing prefixes, 'dhcp' or 
+              'addrconf')
         vmtype: ANY
         listable: yes (see above)
         create: yes
@@ -1873,9 +1875,11 @@ tab-complete UUIDs rather than having to type them out for every command.
         update: yes
         default:
             if vnc_password.length != 0:
-                '-vnc unix:/tmp/vm.vnc,password -parallel none -usb -usbdevice tablet -k en-us'
+                '-vnc unix:/tmp/vm.vnc,password -parallel none -usb -usbdevice\
+ tablet -k en-us'
             else
-                '-vnc unix:/tmp/vm.vnc -parallel none -usb -usbdevice tablet -k en-us'
+                '-vnc unix:/tmp/vm.vnc -parallel none -usb -usbdevice tablet -k\
+ en-us'
 
     qemu_extra_opts:
 
@@ -2490,8 +2494,8 @@ The state field will have similar transition except:
  * It is possible for a VM to be in state 'receiving' while zone\_state
    transitions through several states.
 
- * HVM VMs can show state 'stopping' when zone\_state is running but the guest OS
-   has been notified that it should perform an orderly shutdown.
+ * HVM VMs can show state 'stopping' when zone\_state is running but the guest 
+   OS has been notified that it should perform an orderly shutdown.
 
 The rest of this section describes the possible values for the 'state' and
 'zone_state' fields for a VM object. Each state will be followed by a note about
@@ -2633,7 +2637,7 @@ stopping
 
 
 ## EXAMPLES
-
+```
     Example 1: Listing KVM VMs with 128M of RAM, sorting by RAM descending and
                with customized field order.
 
@@ -2709,7 +2713,7 @@ stopping
 
         vmadm update 54f1cc77-68f1-42ab-acac-5c4f64f5d6e0 quota=40
 
-    Example 8: Set the cpu_shares to 100 for VM 54f1cc77-68f1-42ab-acac-5c4f64f5d6e0
+    Example 8: Set cpu_shares to 100 for VM 54f1cc77-68f1-42ab-acac-5c4f64f5d6e0
 
         echo '{"cpu_shares": 100}' | \
             vmadm update 54f1cc77-68f1-42ab-acac-5c4f64f5d6e0
@@ -2729,7 +2733,6 @@ stopping
           ]
         }
         EOF
-
     Example 10: Change the IP of the NIC with MAC b2:1e:ba:a5:6e:71 for the VM
                 with the UUID 54f1cc77-68f1-42ab-acac-5c4f64f5d6e0.
 
@@ -2750,7 +2753,8 @@ stopping
         echo '{"remove_nics": ["b2:1e:ba:a5:6e:71"]}' | \
             vmadm update 54f1cc77-68f1-42ab-acac-5c4f64f5d6e0
 
-    Example 12: Adding a lofs filesystem mount to the VM 54f1cc77-68f1-42ab-acac-5c4f64f5d6e0
+    Example 12: Adding a lofs filesystem mount to the VM 54f1cc77-68f1-42ab-acac
+-5c4f64f5d6e0
 
         vmadm update 54f1cc77-68f1-42ab-acac-5c4f64f5d6e0 <<EOF
         {
@@ -2782,7 +2786,7 @@ stopping
     Example 16: Delete VM 54f1cc77-68f1-42ab-acac-5c4f64f5d6e0
 
         vmadm delete 54f1cc77-68f1-42ab-acac-5c4f64f5d6e0
-
+```
 
 ## EXIT STATUS
 

@@ -141,6 +141,7 @@ function get_smbios_system_info()
     tmp_uuid=$(/usr/bin/bootparams | grep "^override_uuid=" | cut -f2 -d'=')
     if [[ -n $tmp_uuid ]]; then
         UUID=$tmp_uuid
+        OVERRIDE_UUID=$tmp_uuid
     fi
 
     #echo "${UUID}"
@@ -1175,6 +1176,36 @@ fi
 END
 }
 
+# Hardware can be fickle. We have seen systems with a misbehaving
+# BMC return the wrong UUID to `smbios` on later boots.
+# We want to record the node UUID on the zones pool and keep reusing
+# it on subsequent boots.
+# Sources of UUID:
+# 1. `smbios`
+# 2. override_uuid bootparam
+# 3. com.tritondatacenter:uuid on $Zpool
+# We prefer 3 over 1
+# We prefer 2 over 3 and update 3 if they disagree.
+function get_or_store_uuid()
+{
+    [[ -z "$Zpool" ]] && return
+    local key="com.tritondatacenter:uuid"
+    local uuid_source=$(zfs get -Hp -o source ${key} ${Zpool})
+    if [[ "$uuid_source" != "local" ]]; then
+        # Nothing recorded on the pool. Trust whatever we have.
+        zfs set ${key}=${UUID} ${Zpool}
+    else
+        # Read what was stored on the pool.
+        local uuid_value=$(zfs get -Hp -o value ${key} ${Zpool})
+	# If we received an override, update the pool if needed
+	if [[ -n ${OVERRIDE_UUID} && ${OVERRIDE_UUID} != ${uuid_value}]]; then
+            zfs set ${key}=${OVERRIDE_UUID} ${Zpool}
+        fi
+	# The pool now contains the correct value to return.
+	UUID=$(zfs get -Hp -o value ${key} ${Zpool})
+    fi
+}
+
 if [[ ${ZONENAME} == "global" ]]; then
     get_smbios_system_info
     get_vm_capable
@@ -1207,6 +1238,7 @@ get_smartos_vnics
 get_aggr_params
 get_boot_time
 get_dc_info
+get_or_store_uuid
 
 # whenever we update the cache, update both
 if [[ ${CACHE} == "true" ]]; then

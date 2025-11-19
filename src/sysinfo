@@ -1197,12 +1197,12 @@ function get_or_store_uuid()
     else
         # Read what was stored on the pool.
         local uuid_value=$(zfs get -Hp -o value ${key} ${Zpool})
-	# If we received an override, update the pool if needed
-	if [[ -n ${OVERRIDE_UUID} && ${OVERRIDE_UUID} != ${uuid_value}]]; then
+        # If we received an override, update the pool if needed
+        if [[ -n ${OVERRIDE_UUID} && ${OVERRIDE_UUID} != ${uuid_value} ]]; then
             zfs set ${key}=${OVERRIDE_UUID} ${Zpool}
         fi
-	# The pool now contains the correct value to return.
-	UUID=$(zfs get -Hp -o value ${key} ${Zpool})
+        # The pool now contains the correct value to return.
+        UUID=$(zfs get -Hp -o value ${key} ${Zpool})
     fi
 }
 

@@ -1176,6 +1176,10 @@ fi
 END
 }
 
+function valid_uuid(){
+        uuid -d "$@" &>/dev/null
+}
+
 # Hardware can be fickle. We have seen systems with a misbehaving
 # BMC return the wrong UUID to `smbios` on later boots.
 # We want to record the node UUID on the zones pool and keep reusing
@@ -1192,17 +1196,24 @@ function get_or_store_uuid()
     local key="com.tritondatacenter:uuid"
     local uuid_source=$(zfs get -Hp -o source ${key} ${Zpool})
     if [[ "$uuid_source" != "local" ]]; then
-        # Nothing recorded on the pool. Trust whatever we have.
+        # Nothing recorded on the pool. Trust whatever we have
+        # if it is valid
+        valid_uuid ${UUID} || return
         zfs set ${key}=${UUID} ${Zpool}
     else
         # Read what was stored on the pool.
         local uuid_value=$(zfs get -Hp -o value ${key} ${Zpool})
+        valid_uuid ${uuid_value} || return
         # If we received an override, update the pool if needed
+        # if it is valid
         if [[ -n ${OVERRIDE_UUID} && ${OVERRIDE_UUID} != ${uuid_value} ]]; then
+            valid_uuid ${OVERRIDE_UUID} || return
             zfs set ${key}=${OVERRIDE_UUID} ${Zpool}
         fi
         # The pool now contains the correct value to return.
-        UUID=$(zfs get -Hp -o value ${key} ${Zpool})
+        uuid_value=$(zfs get -Hp -o value ${key} ${Zpool})
+        valid_uuid ${uuid_value} || return
+        UUID=${uuid_value}
     fi
 }
 

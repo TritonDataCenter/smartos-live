@@ -1194,22 +1194,22 @@ function get_or_store_uuid()
 {
     [[ -z "$Zpool" ]] && return
     local key="com.tritondatacenter:uuid"
-    local uuid_source=$(zfs get -Hp -o source ${key} ${Zpool})
+    local uuid_source=$(zfs get -Hp -o source ${key} ${Zpool}/var)
     if [[ "$uuid_source" != "local" ]]; then
         # Nothing recorded on the pool. Trust whatever we have
         # if it is valid
         valid_uuid ${UUID} || return
-        zfs set ${key}=${UUID} ${Zpool}
+        zfs set ${key}=${UUID} ${Zpool}/var
     else
         # Read what was stored on the pool.
-        local uuid_value=$(zfs get -Hp -o value ${key} ${Zpool})
+        local uuid_value=$(zfs get -Hp -o value ${key} ${Zpool}/var)
         # If we received a valid override, update the pool if needed.
         if [[ -n ${OVERRIDE_UUID} && ${OVERRIDE_UUID} != ${uuid_value} ]]; then
             valid_uuid ${OVERRIDE_UUID} || return
-            zfs set ${key}=${OVERRIDE_UUID} ${Zpool}
+            zfs set ${key}=${OVERRIDE_UUID} ${Zpool}/var
         fi
         # The pool now contains the correct value to return.
-        uuid_value=$(zfs get -Hp -o value ${key} ${Zpool})
+        uuid_value=$(zfs get -Hp -o value ${key} ${Zpool}/var)
         valid_uuid ${uuid_value} || return
         UUID=${uuid_value}
     fi

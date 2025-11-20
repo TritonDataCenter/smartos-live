@@ -1188,14 +1188,14 @@ function valid_uuid(){
 # Sources of UUID:
 # 1. `smbios`
 # 2. override_uuid bootparam
-# 3. com.tritondatacenter:uuid on $Zpool
+# 3. org.smartos:server_uuid on $Zpool
 # We prefer 3 over 1
 # We prefer 2 over 3 and update 3 if they disagree.
 function get_or_store_uuid()
 {
     [[ -z "$Zpool" ]] && return
 
-    local key="com.tritondatacenter:uuid"
+    local key="org.smartos:server_uuid"
     local dataset="${Zpool}/var"
     local uuid_source=$(zfs get -Hp -o source ${key} ${dataset})
     if [[ "$uuid_source" == "local" ]]; then

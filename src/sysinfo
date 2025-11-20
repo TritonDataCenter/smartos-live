@@ -1194,26 +1194,36 @@ function valid_uuid(){
 function get_or_store_uuid()
 {
     [[ -z "$Zpool" ]] && return
+
     local key="com.tritondatacenter:uuid"
-    local uuid_source=$(zfs get -Hp -o source ${key} ${Zpool}/var)
-    if [[ "$uuid_source" != "local" ]]; then
-        # Nothing recorded on the pool. Trust whatever we have
-        # if it is valid
-        valid_uuid ${UUID} || return
-        zfs set ${key}=${UUID} ${Zpool}/var
-    else
+    local dataset="${Zpool}/var"
+    local uuid_source=$(zfs get -Hp -o source ${key} ${dataset})
+    if [[ "$uuid_source" == "local" ]]; then
         # Read what was stored on the pool.
-        local uuid_value=$(zfs get -Hp -o value ${key} ${Zpool}/var)
+        local uuid_value=$(zfs get -Hp -o value ${key} ${dataset})
         # If we received a valid override, update the pool if needed.
         if [[ -n ${OVERRIDE_UUID} && ${OVERRIDE_UUID} != ${uuid_value} ]]; then
-            valid_uuid ${OVERRIDE_UUID} || return
-            zfs set ${key}=${OVERRIDE_UUID} ${Zpool}/var
+            valid_uuid ${OVERRIDE_UUID} && \
+                zfs set ${key}=${OVERRIDE_UUID} ${dataset}
+            # Explicitly read it back in.
+            uuid_value=$(zfs get -Hp -o value ${key} ${dataset})
         fi
-        # The pool now contains the correct value to return.
-        uuid_value=$(zfs get -Hp -o value ${key} ${Zpool}/var)
-        valid_uuid ${uuid_value} || return
-        UUID=${uuid_value}
+        if valid_uuid ${uuid_value}; then
+            # Pool contains a valid UUID. Use it.
+            UUID=${uuid_value}
+            return
+        else
+            # Pool contained an invalid UUID somehow!
+            # Delete it.
+            zfs inherit ${key} ${dataset}
+        fi
     fi
+
+    # If we get here, either we had nothing on the pool
+    # or we had something invalid that we just deleted.
+    # Persist whatever UUID we have if it is valid.
+    valid_uuid ${UUID} && \
+        zfs set ${key}=${UUID} ${dataset}
 }
 
 if [[ ${ZONENAME} == "global" ]]; then

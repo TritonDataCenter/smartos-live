@@ -2,6 +2,7 @@
 #
 # Copyright 2020 Joyent, Inc.
 # Copyright 2024 MNX Cloud, Inc.
+# Copyright 2025 Edgecast Cloud LLC.
 #
 # Output some info representing the system.  Default: JSON
 #
@@ -141,6 +142,7 @@ function get_smbios_system_info()
     tmp_uuid=$(/usr/bin/bootparams | grep "^override_uuid=" | cut -f2 -d'=')
     if [[ -n $tmp_uuid ]]; then
         UUID=$tmp_uuid
+        OVERRIDE_UUID=$tmp_uuid
     fi
 
     #echo "${UUID}"
@@ -1175,6 +1177,57 @@ fi
 END
 }
 
+function valid_uuid(){
+        uuid -d "$@" &>/dev/null
+}
+
+# Hardware can be fickle. We have seen systems with a misbehaving
+# BMC return the wrong UUID to `smbios` on later boots.
+# We want to record the node UUID on the zones pool and keep reusing
+# it on subsequent boots.
+# Sources of UUID:
+# 1. `smbios`
+# 2. override_uuid bootparam
+# 3. org.smartos:server_uuid on $Zpool
+# We prefer 3 over 1
+# We prefer 2 over 3 and update 3 if they disagree.
+# NOTE: This function is only effective if called
+# AFTER both get_zpool and get_bootparams.
+function get_or_store_uuid()
+{
+    [[ -z "$Zpool" ]] && return
+
+    local key="org.smartos:server_uuid"
+    local dataset="${Zpool}/var"
+    local uuid_source=$(zfs get -Hp -o source ${key} ${dataset})
+    if [[ "$uuid_source" == "local" ]]; then
+        # Read what was stored on the pool.
+        local uuid_value=$(zfs get -Hp -o value ${key} ${dataset})
+        # If we received a valid override, update the pool if needed.
+        if [[ -n ${OVERRIDE_UUID} && ${OVERRIDE_UUID} != ${uuid_value} ]]; then
+            valid_uuid ${OVERRIDE_UUID} && \
+                zfs set ${key}=${OVERRIDE_UUID} ${dataset}
+            # Explicitly read it back in.
+            uuid_value=$(zfs get -Hp -o value ${key} ${dataset})
+        fi
+        if valid_uuid ${uuid_value}; then
+            # Pool contains a valid UUID. Use it.
+            UUID=${uuid_value}
+            return
+        else
+            # Pool contained an invalid UUID somehow!
+            # Delete it.
+            zfs inherit ${key} ${dataset}
+        fi
+    fi
+
+    # If we get here, either we had nothing on the pool
+    # or we had something invalid that we just deleted.
+    # Persist whatever UUID we have if it is valid.
+    valid_uuid ${UUID} && \
+        zfs set ${key}=${UUID} ${dataset}
+}
+
 if [[ ${ZONENAME} == "global" ]]; then
     get_smbios_system_info
     get_vm_capable
@@ -1182,6 +1235,7 @@ if [[ ${ZONENAME} == "global" ]]; then
     get_disks
     get_recovery_configs
     get_bootparams
+    get_or_store_uuid
     get_psrinfo
     get_sdc_version
     if [[ -n ${SMARTDC_VERSION} ]]; then

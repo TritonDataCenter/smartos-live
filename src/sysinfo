@@ -1191,6 +1191,8 @@ function valid_uuid(){
 # 3. org.smartos:server_uuid on $Zpool
 # We prefer 3 over 1
 # We prefer 2 over 3 and update 3 if they disagree.
+# NOTE: This function is only effective if called
+# AFTER both get_zpool and get_bootparams.
 function get_or_store_uuid()
 {
     [[ -z "$Zpool" ]] && return
@@ -1233,6 +1235,7 @@ if [[ ${ZONENAME} == "global" ]]; then
     get_disks
     get_recovery_configs
     get_bootparams
+    get_or_store_uuid
     get_psrinfo
     get_sdc_version
     if [[ -n ${SMARTDC_VERSION} ]]; then
@@ -1258,7 +1261,6 @@ get_smartos_vnics
 get_aggr_params
 get_boot_time
 get_dc_info
-get_or_store_uuid
 
 # whenever we update the cache, update both
 if [[ ${CACHE} == "true" ]]; then

@@ -1,10 +1,12 @@
 # vim: ts=4 sw=4 expandtab
+from __future__ import absolute_import
+
 import os
 import unittest
 
-import fs
-import util
-import warnings
+from . import fs
+from . import util
+from . import warnings
 
 def _getwarningsconf():
     lines = []
@@ -113,7 +115,7 @@ class DeprecatedSetting(Setting):
     wants_parm = False
     value = None
     def load(self, enabled):
-        raise ConfError, 'This setting is deprecated.'
+        raise ConfError('This setting is deprecated.')
 
 class BooleanSetting(Setting):
     wants_parm = False
@@ -128,7 +130,7 @@ class StringSetting(Setting):
         self.value = default
     def load(self, enabled, parm):
         if not enabled:
-            raise ConfError, 'Expected +.'
+            raise ConfError('Expected +.')
         self.value = parm
 
 class DeclareSetting(Setting):
@@ -137,7 +139,7 @@ class DeclareSetting(Setting):
         self.value = []
     def load(self, enabled, parm):
         if not enabled:
-            raise ConfError, 'Expected +.'
+            raise ConfError('Expected +.')
         self.value.append(parm)
 
 class ProcessSetting(Setting):
@@ -156,11 +158,11 @@ class JSVersionSetting(Setting):
     value = util.JSVersion.default()
     def load(self, enabled, parm):
         if not enabled:
-            raise ConfError, 'Expected +.'
+            raise ConfError('Expected +.')
         
         self.value = util.JSVersion.fromtype(parm)
         if not self.value:
-            raise ConfError, 'Invalid JavaScript version: %s' % parm
+            raise ConfError('Invalid JavaScript version: %s' % parm)
 
 class Conf:
     def __init__(self):
@@ -190,7 +192,7 @@ class Conf:
         conf = fs.readfile(path)
         try:
             self.loadtext(conf, dir=os.path.dirname(path))
-        except ConfError, error:
+        except ConfError as error:
             error.path = path
             raise
 
@@ -199,7 +201,7 @@ class Conf:
         for lineno in range(0, len(lines)):
             try:
                 self.loadline(lines[lineno], dir)
-            except ConfError, error:
+            except ConfError as error:
                 error.lineno = lineno
                 raise
 
@@ -220,7 +222,7 @@ class Conf:
         elif line.startswith('-'):
             enabled = False
         else:
-            raise ConfError, 'Expected + or -.'
+            raise ConfError('Expected + or -.')
         line = line[1:]
 
         # Parse the key/parms
@@ -235,7 +237,7 @@ class Conf:
         if setting.wants_parm:
             args['parm'] = parm
         elif parm:
-            raise ConfError, 'The %s setting does not expect a parameter.' % name
+            raise ConfError('The %s setting does not expect a parameter.' % name)
         if setting.wants_dir:
             args['dir'] = dir
         setting.load(**args)

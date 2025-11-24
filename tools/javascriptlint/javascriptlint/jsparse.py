@@ -1,13 +1,15 @@
 #!/usr/bin/env python
 # vim: ts=4 sw=4 expandtab
 """ Parses a script into nodes. """
+from __future__ import print_function
+from __future__ import absolute_import
 import bisect
 import re
 import unittest
 
-import spidermonkey
-from spidermonkey import tok, op
-from util import JSVersion
+from . import spidermonkey
+from .spidermonkey import tok, op
+from .util import JSVersion
 
 _tok_names = dict(zip(
     [getattr(tok, prop) for prop in dir(tok)],
@@ -253,27 +255,27 @@ def is_compilable_unit(script, jsversion):
 
 def _dump_node(node, depth=0):
     if node is None:
-        print '     '*depth,
-        print '(None)'
-        print
+        print('     '*depth, end=' ')
+        print('(None)')
+        print()
     else:
-        print '     '*depth,
-        print '%s, %s' % (_tok_names[node.kind], _op_names[node.opcode])
-        print '     '*depth,
-        print '%s - %s' % (node.start_pos(), node.end_pos())
+        print('     '*depth, end=' ')
+        print('%s, %s' % (_tok_names[node.kind], _op_names[node.opcode]))
+        print('     '*depth, end=' ')
+        print('%s - %s' % (node.start_pos(), node.end_pos()))
         if hasattr(node, 'atom'):
-            print '     '*depth,
-            print 'atom: %s' % node.atom
+            print('     '*depth, end=' ')
+            print('atom: %s' % node.atom)
         if node.no_semi:
-            print '     '*depth,
-            print '(no semicolon)'
-        print
+            print('     '*depth, end=' ')
+            print('(no semicolon)')
+        print()
         for node in node.kids:
             _dump_node(node, depth+1)
 
 def dump_tree(script):
     def error_callback(line, col, msg):
-        print '(%i, %i): %s', (line, col, msg)
+        print('(%i, %i): %s', (line, col, msg))
     node = parse(script, None, error_callback)
     _dump_node(node)
 

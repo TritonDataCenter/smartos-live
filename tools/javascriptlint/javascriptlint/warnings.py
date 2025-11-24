@@ -14,14 +14,16 @@ For example:
         if questionable:
             raise LintWarning, node
 """
+from __future__ import absolute_import
+
 import re
 import sys
 import types
 
-import util
-import visitation
+from . import util
+from . import visitation
 
-from spidermonkey import tok, op
+from .spidermonkey import tok, op
 
 _ALL_TOKENS = tuple(filter(lambda x: x != tok.EOF, tok.__dict__.values()))
 
@@ -104,13 +106,13 @@ def format_error(errname, **errargs):
     try:
         errdesc = re.sub(r"{(\w+)}", lambda match: errargs[match.group(1)], errdesc)
     except (TypeError, KeyError):
-        raise KeyError, 'Invalid keyword in error: ' + errdesc
+        raise KeyError('Invalid keyword in error: ' + errdesc)
     return errdesc
 
 _visitors = []
 def lookfor(*args):
     def decorate(fn):
-        fn.warning = fn.func_name.rstrip('_')
+        fn.warning = fn.__name__.rstrip('_')
         assert fn.warning in warnings, 'Missing warning description: %s' % fn.warning
 
         for arg in args:
@@ -230,17 +232,17 @@ def _get_exit_points(node):
 def comparison_type_conv(node):
     for kid in node.kids:
         if kid.kind == tok.PRIMARY and kid.opcode in (op.NULL, op.TRUE, op.FALSE):
-            raise LintWarning, kid
+            raise LintWarning(kid)
         if kid.kind == tok.NUMBER and not kid.dval:
-            raise LintWarning, kid
+            raise LintWarning(kid)
         if kid.kind == tok.STRING and not kid.atom:
-            raise LintWarning, kid
+            raise LintWarning(kid)
 
 @lookfor(tok.DEFAULT)
 def default_not_at_end(node):
     siblings = node.parent.kids
     if node.node_index != len(siblings)-1:
-        raise LintWarning, siblings[node.node_index+1]
+        raise LintWarning(siblings[node.node_index+1])
 
 @lookfor(tok.CASE)
 def duplicate_case_in_switch(node):
@@ -253,7 +255,7 @@ def duplicate_case_in_switch(node):
         if sibling.kind == tok.CASE:
             sibling_value = sibling.kids[0]
             if node_value.is_equivalent(sibling_value, True):
-                raise LintWarning, node
+                raise LintWarning(node)
 
 @lookfor(tok.SWITCH)
 def missing_default_case(node):
@@ -261,21 +263,21 @@ def missing_default_case(node):
     for case in cases.kids:
         if case.kind == tok.DEFAULT:
             return
-    raise LintWarning, node
+    raise LintWarning(node)
 
 @lookfor(tok.WITH)
 def with_statement(node):
-    raise LintWarning, node
+    raise LintWarning(node)
 
 @lookfor(tok.EQOP,tok.RELOP)
 def useless_comparison(node):
     lvalue, rvalue = node.kids
     if lvalue.is_equivalent(rvalue):
-        raise LintWarning, node
+        raise LintWarning(node)
 
 @lookfor((tok.COLON, op.NAME))
 def use_of_label(node):
-    raise LintWarning, node
+    raise LintWarning(node)
 
 @lookfor((tok.OBJECT, op.REGEXP))
 def misplaced_regex(node):
@@ -291,12 +293,12 @@ def misplaced_regex(node):
         return # Allow in /re/.property
     if node.parent.kind == tok.RETURN:
         return # Allow for return values
-    raise LintWarning, node
+    raise LintWarning(node)
 
 @lookfor(tok.ASSIGN)
 def assign_to_function_call(node):
     if node.kids[0].kind == tok.LP:
-        raise LintWarning, node
+        raise LintWarning(node)
 
 @lookfor(tok.IF)
 def ambiguous_else_stmt(node):
@@ -312,13 +314,13 @@ def ambiguous_else_stmt(node):
             return
         # Else is only ambiguous in the first branch of an if statement.
         if tmp.parent.kind == tok.IF and tmp.node_index == 1:
-            raise LintWarning, else_
+            raise LintWarning(else_)
         tmp = tmp.parent
 
 @lookfor(tok.IF, tok.WHILE, tok.DO, tok.FOR, tok.WITH)
 def block_without_braces(node):
     if node.kids[1].kind != tok.LC:
-        raise LintWarning, node.kids[1]
+        raise LintWarning(node.kids[1])
 
 _block_nodes = (tok.IF, tok.WHILE, tok.DO, tok.FOR, tok.WITH)
 @lookfor(*_block_nodes)
@@ -331,7 +333,7 @@ def ambiguous_nested_stmt(node):
     # was inside a block statement without clarifying curlies.
     # (Otherwise, the node type would be tok.LC.)
     if node.parent.kind in _block_nodes:
-        raise LintWarning, node
+        raise LintWarning(node)
 
 @lookfor(tok.INC, tok.DEC)
 def inc_dec_within_stmt(node):
@@ -347,7 +349,7 @@ def inc_dec_within_stmt(node):
         tmp.parent.parent.kind == tok.FOR:
         return
 
-    raise LintWarning, node
+    raise LintWarning(node)
 
 @lookfor(tok.COMMA)
 def comma_separated_stmts(node):
@@ -357,12 +359,12 @@ def comma_separated_stmts(node):
     # This is an array
     if node.parent.kind == tok.RB:
         return
-    raise LintWarning, node
+    raise LintWarning(node)
 
 @lookfor(tok.SEMI)
 def empty_statement(node):
     if not node.kids[0]:
-        raise LintWarning, node
+        raise LintWarning(node)
 @lookfor(tok.LC)
 def empty_statement_(node):
     if node.kids:
@@ -373,7 +375,7 @@ def empty_statement_(node):
     # Some empty blocks are meaningful.
     if node.parent.kind in (tok.CATCH, tok.CASE, tok.DEFAULT, tok.SWITCH, tok.FUNCTION):
         return
-    raise LintWarning, node
+    raise LintWarning(node)
 
 @lookfor(tok.CASE, tok.DEFAULT)
 def missing_break(node):
@@ -387,7 +389,7 @@ def missing_break(node):
         return
     if None in _get_exit_points(case_contents):
         # Show the warning on the *next* node.
-        raise LintWarning, node.parent.kids[node.node_index+1]
+        raise LintWarning(node.parent.kids[node.node_index+1])
 
 @lookfor(tok.CASE, tok.DEFAULT)
 def missing_break_for_last_case(node):
@@ -396,16 +398,16 @@ def missing_break_for_last_case(node):
     case_contents = node.kids[1]
     assert case_contents.kind == tok.LC
     if None in _get_exit_points(case_contents):
-        raise LintWarning, node
+        raise LintWarning(node)
 
 @lookfor(tok.INC)
 def multiple_plus_minus(node):
     if node.node_index == 0 and node.parent.kind == tok.PLUS:
-        raise LintWarning, node
+        raise LintWarning(node)
 @lookfor(tok.DEC)
 def multiple_plus_minus_(node):
     if node.node_index == 0 and node.parent.kind == tok.MINUS:
-        raise LintWarning, node
+        raise LintWarning(node)
 
 @lookfor((tok.NAME, op.SETNAME))
 def useless_assign(node):
@@ -415,7 +417,7 @@ def useless_assign(node):
     elif node.parent.kind == tok.VAR:
         value = node.kids[0]
     if value and value.kind == tok.NAME and node.atom == value.atom:
-        raise LintWarning, node
+        raise LintWarning(node)
 
 @lookfor(tok.BREAK, tok.CONTINUE, tok.RETURN, tok.THROW)
 def unreachable_code(node):
@@ -426,12 +428,12 @@ def unreachable_code(node):
                 for variable in sibling.kids:
                     value, = variable.kids
                     if value:
-                        raise LintWarning, value
+                        raise LintWarning(value)
             elif sibling.kind == tok.FUNCTION:
                 # Functions are always declared.
                 pass
             else:
-                raise LintWarning, sibling
+                raise LintWarning(sibling)
 
 @lookfor(tok.FOR)
 def unreachable_code_(node):
@@ -441,68 +443,68 @@ def unreachable_code_(node):
         pre, condition, post = preamble.kids
         if post:
             if not None in _get_exit_points(code):
-                raise LintWarning, post
+                raise LintWarning(post)
 
 @lookfor(tok.DO)
 def unreachable_code__(node):
     # Warn if the do..while loop always exits.
     code, condition = node.kids
     if not None in _get_exit_points(code):
-        raise LintWarning, condition
+        raise LintWarning(condition)
 
 #TODO: @lookfor(tok.IF)
 def meaningless_block(node):
     condition, if_, else_ = node.kids
     if condition.kind == tok.PRIMARY and condition.opcode in (op.TRUE, op.FALSE, op.NULL):
-        raise LintWarning, condition
+        raise LintWarning(condition)
 #TODO: @lookfor(tok.WHILE)
 def meaningless_blocK_(node):
     condition = node.kids[0]
     if condition.kind == tok.PRIMARY and condition.opcode in (op.FALSE, op.NULL):
-        raise LintWarning, condition
+        raise LintWarning(condition)
 @lookfor(tok.LC)
 def meaningless_block__(node):
     if node.parent and node.parent.kind == tok.LC:
-        raise LintWarning, node
+        raise LintWarning(node)
 
 @lookfor((tok.UNARYOP, op.VOID))
 def useless_void(node):
-    raise LintWarning, node
+    raise LintWarning(node)
 
 @lookfor((tok.LP, op.CALL))
 def parseint_missing_radix(node):
     if node.kids[0].kind == tok.NAME and node.kids[0].atom == 'parseInt' and len(node.kids) <= 2:
-        raise LintWarning, node
+        raise LintWarning(node)
 
 @lookfor(tok.NUMBER)
 def leading_decimal_point(node):
     if node.atom.startswith('.'):
-        raise LintWarning, node
+        raise LintWarning(node)
 
 @lookfor(tok.NUMBER)
 def trailing_decimal_point(node):
     if node.parent.kind == tok.DOT:
-        raise LintWarning, node
+        raise LintWarning(node)
     if node.atom.endswith('.'):
-        raise LintWarning, node
+        raise LintWarning(node)
 
 _octal_regexp = re.compile('^0[0-9]')
 @lookfor(tok.NUMBER)
 def octal_number(node):
     if _octal_regexp.match(node.atom):
-        raise LintWarning, node
+        raise LintWarning(node)
 
 @lookfor(tok.RB)
 def trailing_comma_in_array(node):
     if node.end_comma:
-        raise LintWarning, node
+        raise LintWarning(node)
 
 @lookfor(tok.STRING)
 def useless_quotes(node):
     if node.node_index == 0 and node.parent.kind == tok.COLON:
         # Only warn if the quotes could safely be removed.
         if util.isidentifier(node.atom):
-            raise LintWarning, node
+            raise LintWarning(node)
 
 @lookfor(tok.SEMI)
 def want_assign_or_call(node):
@@ -524,7 +526,7 @@ def want_assign_or_call(node):
         grandchild = child.kids[0]
         if grandchild.kind == tok.FUNCTION:
             return
-    raise LintWarning, child
+    raise LintWarning(child)
 
 def _check_return_value(node):
     name = node.fn_name or '(anonymous function)'
@@ -594,7 +596,7 @@ def duplicate_formal(node):
 def missing_semicolon(node):
     if node.no_semi:
         if not _get_assigned_lambda(node):
-            raise LintWarning, node
+            raise LintWarning(node)
 
 @lookfor(*_ALL_TOKENS)
 def missing_semicolon_for_lambda(node):
@@ -603,7 +605,7 @@ def missing_semicolon_for_lambda(node):
         # statements, so use the position of the lambda instead.
         lambda_ = _get_assigned_lambda(node)
         if lambda_:
-            raise LintWarning, lambda_
+            raise LintWarning(lambda_)
 
 @lookfor()
 def ambiguous_newline(node):

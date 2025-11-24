@@ -21,6 +21,7 @@
  * CDDL HEADER END
  *
  * Copyright 2019 Joyent, Inc.
+ * Copyright 2022 MNX Cloud, Inc.
  *
  *
  * # OVERVIEW
@@ -66,7 +67,7 @@
  * With a socket created and the server listening, the client in the zone can
  * make queries using the metadata protocol described at:
  *
- *    https://eng.joyent.com/mdata/protocol.html
+ *    https://eng.tritondatacenter.com/mdata/protocol.html
  *
  *
  * # CLEANUP AND ERRORS

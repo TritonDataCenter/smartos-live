@@ -1,12 +1,13 @@
 # mdata-client
 
 This repository contains metadata retrieval and manipulation tools for use
-within guests of the SmartOS (and SDC) hypervisor.  These guests may be either
-SmartOS Zones or KVM virtual machines.
+within guests of the SmartOS (and Triton) hypervisor.  These guests may be
+either SmartOS Zones or KVM virtual machines.
 
-This repository is part of the Joyent SmartDataCenter project (SDC).  For
-contribution guidelines, issues, and general documentation, visit the main
-[SDC](http://github.com/joyent/sdc) project page.
+This repository is part of the Triton Data Center project (formerly known as
+SmartDataCenter, hence SDC).  For contribution guidelines, issues, and
+general documentation, visit the main
+[Triton](http://github.com/TritonDataCenter/triton) project page.
 
 # Commands
 
@@ -45,9 +46,9 @@ is absolutely welcome.
 
 MIT (See _LICENSE_.)
 
-[mdata_docs]: http://eng.joyent.com/mdata/
-[protocol]: http://eng.joyent.com/mdata/protocol.html
-[datadict]: http://eng.joyent.com/mdata/datadict.html
+[mdata_docs]: http://eng.tritondatacenter.com/mdata/
+[protocol]: http://eng.tritondatacenter.com/mdata/protocol.html
+[datadict]: http://eng.tritondatacenter.com/mdata/datadict.html
 [mdata_get]: http://smartos.org/man/8/mdata-get
 [mdata_delete]: http://smartos.org/man/8/mdata-delete
 [mdata_put]: http://smartos.org/man/8/mdata-put

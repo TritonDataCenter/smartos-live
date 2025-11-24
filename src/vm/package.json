@@ -2,7 +2,7 @@
   "name": "vmadm",
   "description": "administrative tool(s) for managing VMs",
   "version": "1.0.5",
-  "author": "Joyent (joyent.com)",
+  "author": "Triton Data Center (tritondatacenter.com)",
   "private": true,
   "devDependencies": {
   },

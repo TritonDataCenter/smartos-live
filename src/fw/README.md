@@ -1,10 +1,10 @@
 # fwadm
 
-Repository: <https://github.com/joyent/smartos-live.git>
-Browsing: <https://github.com/joyent/smartos-live/tree/master/src/fw>
+Repository: <https://github.com/TritonDataCenter/smartos-live.git>
+Browsing: <https://github.com/TritonDataCenter/smartos-live/tree/master/src/fw>
 Who: SmartOS mailing list <smartos-discuss@lists.smartos.org>
-Docs: <https://github.com/joyent/smartos-live/tree/master/src/fw/README.md>
-Tickets/bugs: <https://github.com/joyent/smartos-live/issues>
+Docs: <https://github.com/TritonDataCenter/smartos-live/tree/master/src/fw/README.md>
+Tickets/bugs: <https://github.com/TritonDataCenter/smartos-live/issues>
 
 
 # Overview

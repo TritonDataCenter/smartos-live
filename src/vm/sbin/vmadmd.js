@@ -63,6 +63,10 @@ var REPORTED_STATES = ['running', 'stopped'];
 var VMADMD_PORT = 8080;
 var VMADMD_AUTOBOOT_FILE = '/tmp/.autoboot_vmadmd';
 
+// Console proxy configuration
+var CONSOLE_HANDSHAKE_TIMEOUT = 5000;  // Timeout for zoneadmd handshake (ms)
+var CONSOLE_LOG_TRUNCATE_LEN = 100;    // Max chars to log from handshake errors
+
 var CONSOLE = {};
 var PROV_WAIT = {};
 var SDC = {};
@@ -512,7 +516,7 @@ function spawnConsoleProxy(vmobj)
                     cleanup();
                     c.end();
                 }
-            }, 5000);
+            }, CONSOLE_HANDSHAKE_TIMEOUT);
 
             consoleSocket.once('connect', function () {
                 // Send zlogin-C handshake: IDENT <locale> <flags>\n
@@ -523,14 +527,14 @@ function spawnConsoleProxy(vmobj)
                     clearTimeout(handshakeTimer);
                     handshakeTimer = null;
 
-                    if (data.toString().indexOf('OK') === 0) {
+                    if (data.toString().trim() === 'OK') {
                         handshakeDone = true;
                         // Now start bidirectional pipe
                         c.pipe(consoleSocket);
                         consoleSocket.pipe(c);
                     } else {
                         log.error('console handshake failed for VM ' + vmobj.uuid +
-                            ': ' + data.toString().substring(0, 100));
+                            ': ' + data.toString().substring(0, CONSOLE_LOG_TRUNCATE_LEN));
                         cleanup();
                         c.end();
                     }

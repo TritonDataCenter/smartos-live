@@ -11,6 +11,7 @@
 
 #
 # Copyright 2019 Joyent, Inc.
+# Copyright 2026 Edgecast Cloud LLC.
 #
 
 BASE =		$(CURDIR)
@@ -100,6 +101,7 @@ JS_CHECK_TARGETS=\
 	vm/node_modules/sysevent-stream.js \
 	vm/node_modules/zonecfg.js \
 	vm/node_modules/zoneevent.js \
+	vm/node_modules/cloudinit/*.js \
 	img/lib/*.js \
 	img/sbin/imgadm \
 	img/test/*.test.js \

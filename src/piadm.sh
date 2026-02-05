@@ -14,7 +14,7 @@
 #
 # Copyright 2022 Joyent, Inc.
 # Copyright 2025 MNX Cloud, Inc.
-# Copyright 2025 Edgecast Cloud LLC.
+# Copyright 2026 Edgecast Cloud LLC.
 #
 
 # shellcheck disable=1091
@@ -527,8 +527,8 @@ install() {
 		# is more than enough.
 		vecho "Checking if URL $1 exists (30s) timeout"
 		if ! "${CURL[@]}" --max-time 30 --connect-timeout \
-				10 --head "$1" -w "%{http_code}" 2> /dev/null |\
-				tail -1 > /var/run/piadm.http.$$; then
+				10 --head "$1" -w "%{http_code}" \
+				-o /dev/null > /var/run/piadm.http.$$ 2>/dev/null; then
 			# Get HTTP status code for error reporting
 			http_code=$(cat /var/run/piadm.http.$$)
 			/bin/rm -f /var/run/piadm.http.$$

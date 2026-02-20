@@ -758,6 +758,455 @@ test('_userDataConfig handles non-cloud-config user-data', function (t) {
 });
 
 /*
+ * CIDATA regeneration tests.
+ *
+ * These tests verify that rebuilding a synthetic payload from the VM's
+ * current state (as would happen at boot time) produces the correct
+ * cloud-init configuration.  The synthetic payload maps vmobj.nics to
+ * add_nics and vmobj.customer_metadata to customer_metadata, which is
+ * the format that _networkConfig(), _metaDataConfig(), _userDataConfig(),
+ * and createVolume() expect.
+ */
+
+test('regeneration: synthetic payload with multiple NICs', function (t) {
+    var vmobj = {
+        uuid: 'aaaa-bbbb-cccc-dddd',
+        hostname: 'regen-test',
+        alias: 'regen-alias',
+        nics: [
+            {
+                interface: 'eth0',
+                mac: '02:08:20:AC:E1:00',
+                ips: ['10.0.0.10/24'],
+                gateways: ['10.0.0.1'],
+                primary: true
+            },
+            {
+                interface: 'eth1',
+                mac: '02:08:20:AC:E1:01',
+                ips: ['172.16.0.10/16']
+            }
+        ],
+        resolvers: ['8.8.8.8', '1.1.1.1'],
+        customer_metadata: {}
+    };
+
+    var cidataPayload = {
+        uuid: vmobj.uuid,
+        hostname: vmobj.hostname,
+        alias: vmobj.alias,
+        add_nics: vmobj.nics,
+        resolvers: vmobj.resolvers,
+        customer_metadata: vmobj.customer_metadata
+    };
+
+    var result = nocloud._networkConfig(cidataPayload);
+    t.ok(result.indexOf('eth0:') !== -1, 'contains eth0');
+    t.ok(result.indexOf('eth1:') !== -1, 'contains eth1');
+    t.ok(result.indexOf('- 10.0.0.10/24') !== -1, 'eth0 IP present');
+    t.ok(result.indexOf('- 172.16.0.10/16') !== -1, 'eth1 IP present');
+    t.ok(result.indexOf('gateway4: 10.0.0.1') !== -1, 'gateway on primary');
+    t.ok(result.indexOf('- 8.8.8.8') !== -1, 'first resolver');
+    t.ok(result.indexOf('- 1.1.1.1') !== -1, 'second resolver');
+    t.end();
+});
+
+test('regeneration: NIC added (2 NICs -> 3 NICs)', function (t) {
+    // Initial: 2 NICs
+    var initialPayload = {
+        uuid: 'aaaa-bbbb-cccc-dddd',
+        hostname: 'regen-test',
+        resolvers: ['8.8.8.8'],
+        add_nics: [
+            {
+                interface: 'eth0',
+                mac: '02:08:20:AC:E1:00',
+                ips: ['10.0.0.10/24'],
+                gateways: ['10.0.0.1'],
+                primary: true
+            },
+            {
+                interface: 'eth1',
+                mac: '02:08:20:AC:E1:01',
+                ips: ['172.16.0.10/16']
+            }
+        ]
+    };
+
+    var initialResult = nocloud._networkConfig(initialPayload);
+    t.equal(initialResult.indexOf('eth2:'), -1, 'initial has no eth2');
+
+    // After adding a 3rd NIC
+    var updatedPayload = {
+        uuid: 'aaaa-bbbb-cccc-dddd',
+        hostname: 'regen-test',
+        resolvers: ['8.8.8.8'],
+        add_nics: [
+            {
+                interface: 'eth0',
+                mac: '02:08:20:AC:E1:00',
+                ips: ['10.0.0.10/24'],
+                gateways: ['10.0.0.1'],
+                primary: true
+            },
+            {
+                interface: 'eth1',
+                mac: '02:08:20:AC:E1:01',
+                ips: ['172.16.0.10/16']
+            },
+            {
+                interface: 'eth2',
+                mac: '02:08:20:AC:E1:02',
+                ips: ['192.168.1.10/24']
+            }
+        ]
+    };
+
+    var updatedResult = nocloud._networkConfig(updatedPayload);
+    t.ok(updatedResult.indexOf('eth0:') !== -1, 'still has eth0');
+    t.ok(updatedResult.indexOf('eth1:') !== -1, 'still has eth1');
+    t.ok(updatedResult.indexOf('eth2:') !== -1, 'new eth2 present');
+    t.ok(updatedResult.indexOf('- 192.168.1.10/24') !== -1,
+        'eth2 IP present');
+    t.end();
+});
+
+test('regeneration: NIC removed (3 NICs -> 2 NICs)', function (t) {
+    var payload = {
+        uuid: 'aaaa-bbbb-cccc-dddd',
+        hostname: 'regen-test',
+        resolvers: ['8.8.8.8'],
+        add_nics: [
+            {
+                interface: 'eth0',
+                mac: '02:08:20:AC:E1:00',
+                ips: ['10.0.0.10/24'],
+                gateways: ['10.0.0.1'],
+                primary: true
+            },
+            {
+                interface: 'eth2',
+                mac: '02:08:20:AC:E1:02',
+                ips: ['192.168.1.10/24']
+            }
+        ]
+    };
+
+    var result = nocloud._networkConfig(payload);
+    t.ok(result.indexOf('eth0:') !== -1, 'eth0 still present');
+    t.ok(result.indexOf('eth2:') !== -1, 'eth2 still present');
+    t.equal(result.indexOf('eth1:'), -1, 'removed eth1 is gone');
+    t.equal(result.indexOf('172.16.0.10'), -1,
+        'removed NIC IP is gone');
+    t.end();
+});
+
+test('regeneration: NIC IP changed', function (t) {
+    var payload = {
+        uuid: 'aaaa-bbbb-cccc-dddd',
+        hostname: 'regen-test',
+        resolvers: ['8.8.8.8'],
+        add_nics: [
+            {
+                interface: 'eth0',
+                mac: '02:08:20:AC:E1:00',
+                ips: ['10.0.0.10/24'],
+                gateways: ['10.0.0.1'],
+                primary: true
+            }
+        ]
+    };
+
+    var initialResult = nocloud._networkConfig(payload);
+    t.ok(initialResult.indexOf('- 10.0.0.10/24') !== -1,
+        'initial IP present');
+
+    // Simulate IP change
+    payload.add_nics[0].ips = ['10.0.0.50/24'];
+    var updatedResult = nocloud._networkConfig(payload);
+    t.ok(updatedResult.indexOf('- 10.0.0.50/24') !== -1,
+        'updated IP present');
+    t.equal(updatedResult.indexOf('10.0.0.10'), -1,
+        'old IP is gone');
+    t.end();
+});
+
+test('regeneration: primary NIC changed', function (t) {
+    // NIC B becomes primary instead of NIC A
+    var payload = {
+        uuid: 'aaaa-bbbb-cccc-dddd',
+        hostname: 'regen-test',
+        resolvers: ['8.8.8.8'],
+        add_nics: [
+            {
+                interface: 'eth0',
+                mac: '02:08:20:AC:E1:00',
+                ips: ['10.0.0.10/24'],
+                gateways: ['10.0.0.1']
+            },
+            {
+                interface: 'eth1',
+                mac: '02:08:20:AC:E1:01',
+                ips: ['172.16.0.10/16'],
+                gateways: ['172.16.0.1'],
+                primary: true
+            }
+        ]
+    };
+
+    var result = nocloud._networkConfig(payload);
+
+    // Split at eth1 to check per-interface sections
+    var eth1Pos = result.indexOf('  eth1:');
+    var beforeEth1 = result.substring(0, eth1Pos);
+    var afterEth1 = result.substring(eth1Pos);
+
+    t.equal(beforeEth1.indexOf('gateway4:'), -1,
+        'no gateway on eth0 (non-primary)');
+    t.equal(beforeEth1.indexOf('nameservers:'), -1,
+        'no nameservers on eth0 (non-primary)');
+    t.ok(afterEth1.indexOf('gateway4: 172.16.0.1') !== -1,
+        'gateway on eth1 (new primary)');
+    t.ok(afterEth1.indexOf('nameservers:') !== -1,
+        'nameservers on eth1 (new primary)');
+    t.end();
+});
+
+test('regeneration: resolvers changed', function (t) {
+    var payload = {
+        uuid: 'aaaa-bbbb-cccc-dddd',
+        hostname: 'regen-test',
+        resolvers: ['1.1.1.1', '9.9.9.9'],
+        add_nics: [
+            {
+                interface: 'eth0',
+                mac: '02:08:20:AC:E1:00',
+                ips: ['10.0.0.10/24'],
+                gateways: ['10.0.0.1'],
+                primary: true
+            }
+        ]
+    };
+
+    var result = nocloud._networkConfig(payload);
+    t.ok(result.indexOf('- 1.1.1.1') !== -1, 'new resolver 1');
+    t.ok(result.indexOf('- 9.9.9.9') !== -1, 'new resolver 2');
+    t.equal(result.indexOf('8.8.8.8'), -1, 'old resolver gone');
+    t.end();
+});
+
+test('regeneration: hostname/alias change updates meta-data', function (t) {
+    var payload = {
+        uuid: 'aaaa-bbbb-cccc-dddd',
+        hostname: 'new-hostname',
+        alias: 'new-alias'
+    };
+
+    var result = nocloud._metaDataConfig(payload);
+    t.ok(result.indexOf('local-hostname: new-hostname') !== -1,
+        'meta-data uses updated hostname');
+    t.ok(result.indexOf('instance-id: aaaa-bbbb-cccc-dddd') !== -1,
+        'instance-id remains stable (VM UUID)');
+
+    // When hostname is absent, alias is used
+    var payloadAliasOnly = {
+        uuid: 'aaaa-bbbb-cccc-dddd',
+        alias: 'updated-alias'
+    };
+    var resultAlias = nocloud._metaDataConfig(payloadAliasOnly);
+    t.ok(resultAlias.indexOf('local-hostname: updated-alias') !== -1,
+        'meta-data falls back to updated alias');
+    t.end();
+});
+
+test('regeneration: customer_metadata cloud-init overrides', function (t) {
+    var customUserData = '#cloud-config\npackages:\n  - nginx\n';
+    var customNetConfig = 'version: 2\nethernets:\n  enp0s3:\n'
+        + '    dhcp4: true\n';
+
+    var payload = {
+        uuid: 'aaaa-bbbb-cccc-dddd',
+        hostname: 'regen-test',
+        resolvers: ['8.8.8.8'],
+        add_nics: [
+            {
+                interface: 'eth0',
+                mac: '02:08:20:AC:E1:00',
+                ips: ['10.0.0.10/24'],
+                primary: true
+            }
+        ],
+        customer_metadata: {
+            'cloud-init:user-data': customUserData,
+            'cloud-init:network-config': customNetConfig
+        }
+    };
+
+    var userData = nocloud._userDataConfig(payload);
+    t.equal(userData, customUserData,
+        'user-data matches customer override');
+
+    var netConfig = nocloud._networkConfig(payload);
+    t.equal(netConfig, customNetConfig,
+        'network-config matches customer override');
+    t.end();
+});
+
+/*
+ * Integration test for CIDATA regeneration via createVolume.
+ *
+ * This test creates a CIDATA image with an initial NIC config, then
+ * regenerates the same image file with a different NIC config and
+ * verifies the FAT16 contents reflect the updated configuration.
+ *
+ * This test requires SmartOS with lofiadm, mkfs, and mount privileges.
+ */
+test('regeneration: full FAT16 image updated with new NIC config (integration)',
+    function (t) {
+    var testFile = '/tmp/test-cloudinit-regen-' + process.pid + '.img';
+    var mountPoint = '/tmp/test-cloudinit-regen-mnt-' + process.pid;
+    var lofiDevice = null;
+
+    var initialPayload = {
+        uuid: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+        hostname: 'initial-host',
+        resolvers: ['8.8.8.8'],
+        add_nics: [
+            {
+                interface: 'eth0',
+                mac: '02:00:00:00:00:01',
+                ips: ['10.0.0.10/24'],
+                gateways: ['10.0.0.1'],
+                primary: true
+            }
+        ],
+        customer_metadata: {}
+    };
+
+    var updatedPayload = {
+        uuid: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+        hostname: 'updated-host',
+        resolvers: ['1.1.1.1', '9.9.9.9'],
+        add_nics: [
+            {
+                interface: 'eth0',
+                mac: '02:00:00:00:00:01',
+                ips: ['10.0.0.10/24'],
+                gateways: ['10.0.0.1'],
+                primary: true
+            },
+            {
+                interface: 'eth1',
+                mac: '02:00:00:00:00:02',
+                ips: ['172.16.0.5/16']
+            }
+        ],
+        customer_metadata: {}
+    };
+
+    function cleanup(cb) {
+        exec('umount ' + mountPoint + ' 2>/dev/null; '
+            + (lofiDevice ? 'lofiadm -d ' + lofiDevice + ' 2>/dev/null; ' : '')
+            + 'rmdir ' + mountPoint + ' 2>/dev/null; '
+            + 'rm -f ' + testFile,
+            function () {
+            cb();
+        });
+    }
+
+    // Step 1: Create empty file
+    exec('dd if=/dev/zero of=' + testFile + ' bs=1M count=16 2>/dev/null',
+        function (ddErr) {
+        if (ddErr) {
+            t.ok(false, 'dd failed: ' + ddErr.message);
+            t.end();
+            return;
+        }
+
+        // Step 2: Create initial CIDATA
+        nocloud.createVolume(mockLog, initialPayload, testFile,
+            function (createErr) {
+            if (createErr) {
+                t.ok(false, 'initial createVolume failed: '
+                    + createErr.message);
+                cleanup(function () { t.end(); });
+                return;
+            }
+            t.ok(true, 'initial CIDATA created');
+
+            // Step 3: Regenerate with updated payload (same file path)
+            nocloud.createVolume(mockLog, updatedPayload, testFile,
+                function (regenErr) {
+                if (regenErr) {
+                    t.ok(false, 'regenerate createVolume failed: '
+                        + regenErr.message);
+                    cleanup(function () { t.end(); });
+                    return;
+                }
+                t.ok(true, 'CIDATA regenerated');
+
+                // Step 4: Mount and verify updated contents
+                exec('lofiadm -a ' + testFile, function (lofiErr, lofiOut) {
+                    if (lofiErr) {
+                        t.ok(false, 'lofiadm failed: ' + lofiErr.message);
+                        cleanup(function () { t.end(); });
+                        return;
+                    }
+                    lofiDevice = lofiOut.trim();
+
+                    exec('mkdir -p ' + mountPoint, function (mkdirErr) {
+                        if (mkdirErr) {
+                            t.ok(false, 'mkdir failed: ' + mkdirErr.message);
+                            cleanup(function () { t.end(); });
+                            return;
+                        }
+
+                        exec('mount -F pcfs ' + lofiDevice + ' ' + mountPoint,
+                            function (mountErr) {
+                            if (mountErr) {
+                                t.ok(false, 'mount failed: '
+                                    + mountErr.message);
+                                cleanup(function () { t.end(); });
+                                return;
+                            }
+
+                            // Verify meta-data has updated hostname
+                            var metaData = fs.readFileSync(
+                                mountPoint + '/meta-data', 'utf8');
+                            t.ok(metaData.indexOf(
+                                'local-hostname: updated-host') !== -1,
+                                'meta-data has updated hostname');
+                            t.ok(metaData.indexOf('instance-id: '
+                                + 'a1b2c3d4-e5f6-7890-abcd-ef1234567890')
+                                !== -1,
+                                'instance-id unchanged');
+
+                            // Verify network-config has both NICs
+                            var networkConfig = fs.readFileSync(
+                                mountPoint + '/network-config', 'utf8');
+                            t.ok(networkConfig.indexOf('eth0:') !== -1,
+                                'network-config has eth0');
+                            t.ok(networkConfig.indexOf('eth1:') !== -1,
+                                'network-config has new eth1');
+                            t.ok(networkConfig.indexOf('172.16.0.5/16')
+                                !== -1,
+                                'network-config has eth1 IP');
+                            t.ok(networkConfig.indexOf('- 1.1.1.1') !== -1,
+                                'network-config has updated resolver');
+
+                            cleanup(function () {
+                                t.ok(true, 'cleanup completed');
+                                t.end();
+                            });
+                        });
+                    });
+                });
+            });
+        });
+    });
+});
+
+/*
  * Integration test for createVolume.
  *
  * This test requires SmartOS with lofiadm, mkfs, and mount privileges.

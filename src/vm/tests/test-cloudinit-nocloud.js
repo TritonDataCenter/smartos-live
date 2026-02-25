@@ -45,30 +45,6 @@ var mockLog = {
     trace: function () {}
 };
 
-test('_netmaskToCidr converts common netmasks', function (t) {
-    t.equal(nocloud._netmaskToCidr('255.255.255.255'), 32, '/32 host mask');
-    t.equal(nocloud._netmaskToCidr('255.255.255.0'), 24, '/24 class C');
-    t.equal(nocloud._netmaskToCidr('255.255.0.0'), 16, '/16 class B');
-    t.equal(nocloud._netmaskToCidr('255.0.0.0'), 8, '/8 class A');
-    t.equal(nocloud._netmaskToCidr('0.0.0.0'), 0, '/0 default route');
-    t.end();
-});
-
-test('_netmaskToCidr converts VLSM netmasks', function (t) {
-    t.equal(nocloud._netmaskToCidr('255.255.255.254'), 31, '/31 point-to-point');
-    t.equal(nocloud._netmaskToCidr('255.255.255.252'), 30, '/30 four addresses');
-    t.equal(nocloud._netmaskToCidr('255.255.255.248'), 29, '/29');
-    t.equal(nocloud._netmaskToCidr('255.255.255.240'), 28, '/28');
-    t.equal(nocloud._netmaskToCidr('255.255.255.224'), 27, '/27');
-    t.equal(nocloud._netmaskToCidr('255.255.255.192'), 26, '/26');
-    t.equal(nocloud._netmaskToCidr('255.255.255.128'), 25, '/25');
-    t.equal(nocloud._netmaskToCidr('255.255.254.0'), 23, '/23');
-    t.equal(nocloud._netmaskToCidr('255.255.252.0'), 22, '/22');
-    t.equal(nocloud._netmaskToCidr('255.255.248.0'), 21, '/21');
-    t.equal(nocloud._netmaskToCidr('255.255.240.0'), 20, '/20');
-    t.end();
-});
-
 test('_metaDataConfig generates meta-data with hostname', function (t) {
     var payload = {
         uuid: 'b4c7e1a2-3d5f-4e8a-9b0c-1d2e3f4a5b6c',

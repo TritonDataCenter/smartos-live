@@ -36,7 +36,7 @@ var nocloud = require('/usr/vm/node_modules/cloudinit/nocloud');
 /* jsl:import ../node_modules/nodeunit-plus/index.js */
 require('nodeunit-plus');
 
-// Simple mock logger for createVolume tests
+// Simple mock logger for createPCFS tests
 var mockLog = {
     info: function () {},
     error: function () {},
@@ -741,7 +741,7 @@ test('_userDataConfig handles non-cloud-config user-data', function (t) {
  * cloud-init configuration.  The synthetic payload maps vmobj.nics to
  * add_nics and vmobj.customer_metadata to customer_metadata, which is
  * the format that _networkConfig(), _metaDataConfig(), _userDataConfig(),
- * and createVolume() expect.
+ * and createPCFS() expect.
  */
 
 test('regeneration: synthetic payload with multiple NICs', function (t) {
@@ -1029,7 +1029,7 @@ test('regeneration: customer_metadata cloud-init overrides', function (t) {
 });
 
 /*
- * Integration test for CIDATA regeneration via createVolume.
+ * Integration test for CIDATA regeneration via createPCFS.
  *
  * This test creates a CIDATA image with an initial NIC config, then
  * regenerates the same image file with a different NIC config and
@@ -1100,10 +1100,10 @@ test('regeneration: full FAT16 image updated with new NIC config (integration)',
         }
 
         // Step 2: Create initial CIDATA
-        nocloud.createVolume(mockLog, initialPayload, testFile,
+        nocloud.createPCFS(mockLog, initialPayload, testFile,
             function (createErr) {
             if (createErr) {
-                t.ok(false, 'initial createVolume failed: '
+                t.ok(false, 'initial createPCFS failed: '
                     + createErr.message);
                 cleanup(function () { t.end(); });
                 return;
@@ -1111,10 +1111,10 @@ test('regeneration: full FAT16 image updated with new NIC config (integration)',
             t.ok(true, 'initial CIDATA created');
 
             // Step 3: Regenerate with updated payload (same file path)
-            nocloud.createVolume(mockLog, updatedPayload, testFile,
+            nocloud.createPCFS(mockLog, updatedPayload, testFile,
                 function (regenErr) {
                 if (regenErr) {
-                    t.ok(false, 'regenerate createVolume failed: '
+                    t.ok(false, 'regenerate createPCFS failed: '
                         + regenErr.message);
                     cleanup(function () { t.end(); });
                     return;
@@ -1183,13 +1183,13 @@ test('regeneration: full FAT16 image updated with new NIC config (integration)',
 });
 
 /*
- * Integration test for createVolume.
+ * Integration test for createPCFS.
  *
  * This test requires SmartOS with lofiadm, mkfs, and mount privileges.
- * It creates a 16MiB file, calls createVolume to write cloud-init data,
+ * It creates a 16MiB file, calls createPCFS to write cloud-init data,
  * then mounts the resulting FAT16 image to verify its contents.
  */
-test('createVolume creates valid CIDATA image (integration)', function (t) {
+test('createPCFS creates valid CIDATA image (integration)', function (t) {
     var testFile = '/tmp/test-cloudinit-' + process.pid + '.img';
     var mountPoint = '/tmp/test-cloudinit-mnt-' + process.pid;
     var lofiDevice = null;
@@ -1233,14 +1233,14 @@ test('createVolume creates valid CIDATA image (integration)', function (t) {
         }
         t.ok(true, 'created 16MiB test file');
 
-        // Step 2: Call createVolume
-        nocloud.createVolume(mockLog, payload, testFile, function (createErr) {
+        // Step 2: Call createPCFS
+        nocloud.createPCFS(mockLog, payload, testFile, function (createErr) {
             if (createErr) {
-                t.ok(false, 'createVolume failed: ' + createErr.message);
+                t.ok(false, 'createPCFS failed: ' + createErr.message);
                 cleanup(function () { t.end(); });
                 return;
             }
-            t.ok(true, 'createVolume completed successfully');
+            t.ok(true, 'createPCFS completed successfully');
 
             // Step 3: Mount and inspect
             exec('lofiadm -a ' + testFile, function (lofiErr, lofiOut) {

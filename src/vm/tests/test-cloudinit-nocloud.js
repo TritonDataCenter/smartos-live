@@ -32,6 +32,7 @@ var fs = require('fs');
 var exec = child_process.exec;
 
 var nocloud = require('/usr/vm/node_modules/cloudinit/nocloud');
+var lofs = require('/usr/vm/node_modules/cloudinit/lofs-fat16');
 
 /* jsl:import ../node_modules/nodeunit-plus/index.js */
 require('nodeunit-plus');
@@ -676,6 +677,186 @@ test('_vendorDataConfig prefers set_customer_metadata', function (t) {
 
     t.equal(result, setVendor,
         'prefers set_customer_metadata for vendor-data');
+    t.end();
+});
+
+/*
+ * updatePayloadDisks tests
+ */
+
+test('updatePayloadDisks pushes correct disk entry', function (t) {
+    var payload = {
+        add_disks: [],
+        quota: 10
+    };
+    nocloud.updatePayloadDisks(mockLog, payload);
+
+    t.equal(payload.add_disks.length, 1, 'one disk added');
+    var disk = payload.add_disks[0];
+    t.equal(disk.size, lofs.DISK_SIZE_MIB, 'size matches DISK_SIZE_MIB');
+    t.equal(disk.model, 'virtio', 'model is virtio');
+    t.equal(disk.boot, false, 'boot is false');
+    t.equal(disk.media, 'disk', 'media is disk');
+    t.equal(disk.block_size, lofs.BLOCK_SIZE, 'block_size matches');
+    t.equal(disk.cloudinit_datasource, 'nocloud',
+        'cloudinit_datasource is nocloud');
+    t.end();
+});
+
+test('updatePayloadDisks adjusts flexible_disk_size when present',
+    function (t) {
+    var payload = {
+        add_disks: [],
+        flexible_disk_size: 100
+    };
+    nocloud.updatePayloadDisks(mockLog, payload);
+
+    t.equal(payload.flexible_disk_size, 100 + lofs.DISK_SIZE_MIB,
+        'flexible_disk_size increased by DISK_SIZE_MIB');
+    t.end();
+});
+
+test('updatePayloadDisks adjusts quota when flexible_disk_size absent '
+    + 'and quota insufficient', function (t) {
+    var payload = {
+        add_disks: [],
+        quota: 0
+    };
+    nocloud.updatePayloadDisks(mockLog, payload);
+
+    var expectedGiB = Math.ceil(lofs.DISK_SIZE_MIB / 1024);
+    t.equal(payload.quota, expectedGiB,
+        'quota increased by ceil(DISK_SIZE_MIB/1024)');
+    t.end();
+});
+
+test('updatePayloadDisks leaves quota alone when already sufficient',
+    function (t) {
+    var payload = {
+        add_disks: [],
+        quota: 100
+    };
+    nocloud.updatePayloadDisks(mockLog, payload);
+
+    t.equal(payload.quota, 100, 'quota unchanged');
+    t.end();
+});
+
+test('updatePayloadDisks prefers flexible_disk_size over quota', function (t) {
+    var payload = {
+        add_disks: [],
+        flexible_disk_size: 50,
+        quota: 0
+    };
+    nocloud.updatePayloadDisks(mockLog, payload);
+
+    t.equal(payload.flexible_disk_size, 50 + lofs.DISK_SIZE_MIB,
+        'flexible_disk_size adjusted');
+    t.equal(payload.quota, 0, 'quota not touched when flexible_disk_size set');
+    t.end();
+});
+
+/*
+ * validateNoCloudDisk tests
+ */
+
+test('validateNoCloudDisk returns true for matching disk', function (t) {
+    var disks = [{
+        path: '/dev/zvol/rdsk/zones/abc-def/disk1',
+        size: lofs.DISK_SIZE_MIB,
+        block_size: lofs.BLOCK_SIZE,
+        boot: false
+    }];
+    t.equal(nocloud.validateNoCloudDisk(disks,
+        '/dev/zvol/rdsk/zones/abc-def/disk1'), true,
+        'returns true for matching disk');
+    t.end();
+});
+
+test('validateNoCloudDisk returns false for wrong path', function (t) {
+    var disks = [{
+        path: '/dev/zvol/rdsk/zones/abc-def/disk1',
+        size: lofs.DISK_SIZE_MIB,
+        block_size: lofs.BLOCK_SIZE,
+        boot: false
+    }];
+    t.equal(nocloud.validateNoCloudDisk(disks,
+        '/dev/zvol/rdsk/zones/abc-def/disk2'), false,
+        'returns false for wrong path');
+    t.end();
+});
+
+test('validateNoCloudDisk returns false for wrong size', function (t) {
+    var disks = [{
+        path: '/dev/zvol/rdsk/zones/abc-def/disk1',
+        size: 999,
+        block_size: lofs.BLOCK_SIZE,
+        boot: false
+    }];
+    t.equal(nocloud.validateNoCloudDisk(disks,
+        '/dev/zvol/rdsk/zones/abc-def/disk1'), false,
+        'returns false for wrong size');
+    t.end();
+});
+
+test('validateNoCloudDisk returns false for wrong block_size', function (t) {
+    var disks = [{
+        path: '/dev/zvol/rdsk/zones/abc-def/disk1',
+        size: lofs.DISK_SIZE_MIB,
+        block_size: 4096,
+        boot: false
+    }];
+    t.equal(nocloud.validateNoCloudDisk(disks,
+        '/dev/zvol/rdsk/zones/abc-def/disk1'), false,
+        'returns false for wrong block_size');
+    t.end();
+});
+
+test('validateNoCloudDisk returns false when boot is true', function (t) {
+    var disks = [{
+        path: '/dev/zvol/rdsk/zones/abc-def/disk1',
+        size: lofs.DISK_SIZE_MIB,
+        block_size: lofs.BLOCK_SIZE,
+        boot: true
+    }];
+    t.equal(nocloud.validateNoCloudDisk(disks,
+        '/dev/zvol/rdsk/zones/abc-def/disk1'), false,
+        'returns false when boot is true');
+    t.end();
+});
+
+test('validateNoCloudDisk returns false for empty disks array', function (t) {
+    t.equal(nocloud.validateNoCloudDisk([],
+        '/dev/zvol/rdsk/zones/abc-def/disk1'), false,
+        'returns false for empty array');
+    t.end();
+});
+
+test('validateNoCloudDisk finds correct disk among multiple disks',
+    function (t) {
+    var disks = [
+        {
+            path: '/dev/zvol/rdsk/zones/abc-def/disk0',
+            size: 10240,
+            block_size: 8192,
+            boot: true
+        },
+        {
+            path: '/dev/zvol/rdsk/zones/abc-def/disk1',
+            size: lofs.DISK_SIZE_MIB,
+            block_size: lofs.BLOCK_SIZE,
+            boot: false
+        },
+        {
+            path: '/dev/zvol/rdsk/zones/abc-def/disk2',
+            size: 51200,
+            block_size: 8192,
+            boot: false
+        }
+    ];
+    t.equal(nocloud.validateNoCloudDisk(disks,
+        '/dev/zvol/rdsk/zones/abc-def/disk1'), true,
+        'finds matching disk among multiple disks');
     t.end();
 });
 

@@ -34,6 +34,15 @@ function usage()
 	exit 1
 }
 
+function wipe_bootpools()
+{
+	# disable booting on all pools -- XXX KEBE ASKS, make this optional?
+	for pool in $(piadm bootable | grep -v non-bootable | awk '{print $1}')
+	do
+		piadm bootable -d $pool
+	done
+}
+
 if [[ -n $1 ]] && [[ $1 = "--help" ]]; then
 	usage
 fi
@@ -72,6 +81,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 		[[ -n ${SYS_ZPOOL} ]] || SYS_ZPOOL=zones
 
 		zfs set smartdc:factoryreset=yes ${SYS_ZPOOL}/var
+		wipe_bootpools
 		$final_command
 	else
 		abort

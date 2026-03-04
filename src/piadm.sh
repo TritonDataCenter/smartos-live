@@ -111,6 +111,7 @@ getbootable() {
 	numbootfs=${#allbootfs[@]}
 }
 
+# NOTE: If/when we change the uname information, we'll need to change the sed.
 declare activestamp
 activestamp=$(uname -v | sed 's/joyent_//g')
 declare installstamp

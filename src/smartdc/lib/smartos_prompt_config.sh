@@ -1469,7 +1469,15 @@ if [ $boot_from_zpool == "yes" ]; then
 fi
 
 if [[ $(getanswer "skip_final_confirm") != "true" ]]; then
-	printf "System setup has completed.\n\nPress enter to reboot.\n"
+	if [[ $admin_ip == "dhcp" ]]; then
+		# use "/_a" suffix since we use ifconfig(8) to bring it up.
+		ssh_ip = $(ipadm show-addr -p -o addr "$admin_iface"/_a | \
+		    awk -F/ '{print $1}')
+	else
+		ssh_ip = "$admin_ip"
+	fi
+	printf "\nSSH to host %s or %s.local\n" "$ssh_ip" "$hostname"
+	printf "\nSystem setup has completed.\n\nPress enter to reboot.\n"
 	read foo
 fi
 reboot

@@ -165,7 +165,7 @@ export TIMESTAMP=$(TZ=UTC /bin/date "+%Y%m%dT%H%M%SZ")
 
 # And adjust the last digit (the 0-9 last "second") depending on our Jenkins
 # stage (to prevent BUILDSTAMP collisions in a given full Jenkins build).
-case "${JENKINS_BUILD_STAGE}" in
+case "$JENKINS_STAGE_NAME" in
     'default')
         # Set to 7.
 	sed_string='s/[0-9]Z/7Z/'

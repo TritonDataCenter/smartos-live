@@ -145,6 +145,21 @@ while getopts "cdhF:S:" opt; do
 done
 shift $((OPTIND - 1))
 
+if [[ -z "$PLATFORM_BUILD_FLAVOR" ]]; then
+    PLATFORM_BUILD_FLAVOR="triton"
+fi
+
+case "${PLATFORM_BUILD_FLAVOR}" in
+    'triton'|'smartos'|'triton-and-smartos')
+        ;;
+    'strap-cache'|'ctftools'|'check')
+	NOSTAMP=yes
+	;;
+    *)
+        echo "Error: unknown platform build flavor: ${PLATFORM_BUILD_FLAVOR}"
+        usage
+esac
+
 # Set the timestamp now.
 export TIMESTAMP=$(TZ=UTC /bin/date "+%Y%m%dT%H%M%SZ")
 
@@ -164,25 +179,15 @@ case "${JENKINS_BUILD_STAGE}" in
 	sed_string='s/[0-9]Z/9Z/'
         ;;
     *)
-        echo "Error: unknown Jenkins stage: ${JENKINS_BUILD_STAGE}"
-        usage
+	if [[ -z "$NOSTAMP" ]]; then
+            echo "Error: unknown Jenkins stage: ${JENKINS_BUILD_STAGE}"
+            usage
+	fi
 esac
 
 # Finish adjustment and propagate it to the BUILDSTAMP.
 export TIMESTAMP=$(echo $TIMESTAMP | sed $sed_string)
 export BUILDSTAMP=${TIMESTAMP}
-
-if [[ -z "$PLATFORM_BUILD_FLAVOR" ]]; then
-    PLATFORM_BUILD_FLAVOR="triton"
-fi
-
-case "${PLATFORM_BUILD_FLAVOR}" in
-    'triton'|'smartos'|'triton-and-smartos'|'strap-cache'|'ctftools'|'check')
-        ;;
-    *)
-        echo "Error: unknown platform build flavor: ${PLATFORM_BUILD_FLAVOR}"
-        usage
-esac
 
 ENGBLD_LOGDIR=output/bits/platform${ENGBLD_DEBUG_SUFFIX}
 ENGBLD_LOG=${ENGBLD_LOGDIR}/build.log

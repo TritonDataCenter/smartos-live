@@ -8,6 +8,7 @@
 #
 # Copyright 2022 Joyent, Inc.
 # Copyright 2022 MNX Cloud, Inc.
+# Copyright 2026 Edgecast Cloud LLC.
 #
 
 #
@@ -27,9 +28,6 @@ set -o pipefail
 if [[ -z "${ENGBLD_DEST_OUT_PATH}" ]]; then
     export ENGBLD_DEST_OUT_PATH=/public/builds
 fi
-
-export TIMESTAMP=$(TZ=UTC /bin/date "+%Y%m%dT%H%M%SZ")
-export BUILDSTAMP=${TIMESTAMP}
 
 # Used to flag if this is a non-default build. This modifies the description
 # used for the platform manifest.
@@ -152,12 +150,44 @@ if [[ -z "$PLATFORM_BUILD_FLAVOR" ]]; then
 fi
 
 case "${PLATFORM_BUILD_FLAVOR}" in
-    'triton'|'smartos'|'triton-and-smartos'|'strap-cache'|'ctftools'|'check')
+    'triton'|'smartos'|'triton-and-smartos')
         ;;
+    'strap-cache'|'ctftools'|'check')
+	NOSTAMP=yes
+	;;
     *)
         echo "Error: unknown platform build flavor: ${PLATFORM_BUILD_FLAVOR}"
         usage
 esac
+
+# Set the timestamp now.
+export TIMESTAMP=$(TZ=UTC /bin/date "+%Y%m%dT%H%M%SZ")
+
+# And adjust the last digit (the 0-9 last "second") depending on our Jenkins
+# stage (to prevent BUILDSTAMP collisions in a given full Jenkins build).
+case "$JENKINS_STAGE_NAME" in
+    'default')
+        # Set to 7.
+	sed_string='s/[0-9]Z/7Z/'
+	;;
+    'debug')
+        # Set to 8.
+	sed_string='s/[0-9]Z/8Z/'
+	;;
+    'gcc14') # Update when alternate-compiler stage gets renamed/updated.
+        # Set to 9.
+	sed_string='s/[0-9]Z/9Z/'
+        ;;
+    *)
+	if [[ -z "$NOSTAMP" ]]; then
+            echo "Error: unknown Jenkins stage: ${JENKINS_BUILD_STAGE}"
+            usage
+	fi
+esac
+
+# Finish adjustment and propagate it to the BUILDSTAMP.
+export TIMESTAMP=$(echo $TIMESTAMP | sed $sed_string)
+export BUILDSTAMP=${TIMESTAMP}
 
 ENGBLD_LOGDIR=output/bits/platform${ENGBLD_DEBUG_SUFFIX}
 ENGBLD_LOG=${ENGBLD_LOGDIR}/build.log

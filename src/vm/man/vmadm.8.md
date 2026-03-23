@@ -2126,26 +2126,13 @@ tab-complete UUIDs rather than having to type them out for every command.
         update: yes
         default: 'std'
 
-    virtio09:
-
-	Enables or disables the presentation of virtio 0.9 devices to the
-	guest of any sort. Normally a transitional device (0.9 and 1.0) is
-	presented to the guest, but some guest testing may require hiding
-	0.9 support. Defaults to true.
-
-	type: boolean
-	vmtype: bhyve
-	listable: yes
-	create: yes
-	update: yes
-	default: true
-
     virtio1:
 
-	Enables or disables the presentation of virtio 1.0 devices to the
-	guest of any sort. Some guests have drivers that do not support
-        the transitional (both 0.9 and 1.0) interface for 0.9 devices due
-	to guest driver bugs, so this defaults to false.
+	Enables or disables the presentation of virtio 1.0 devices of any
+	sort to a bhyve guest. Some guests have drivers that do not support
+	the transitional (both 0.9 and 1.0) interface for 0.9 devices due to
+	guest driver bugs, so this defaults to false, for now. The default
+	may change in a future SmartOS version.
 
 	type: boolean
 	vmtype: bhyve

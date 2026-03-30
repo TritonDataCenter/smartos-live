@@ -640,7 +640,7 @@ test('_vendorDataConfig returns customer-provided vendor-data', function (t) {
     var customVendor = '#cloud-config\nruncmd:\n  - echo hello\n';
     var payload = {
         uuid: 'b4c7e1a2-3d5f-4e8a-9b0c-1d2e3f4a5b6c',
-        customer_metadata: {
+        internal_metadata: {
             'cloud-init:vendor-data': customVendor
         }
     };
@@ -661,22 +661,37 @@ test('_vendorDataConfig returns undefined when none provided', function (t) {
     t.end();
 });
 
-test('_vendorDataConfig prefers set_customer_metadata', function (t) {
+test('_vendorDataConfig ignores customer_metadata vendor-data', function (t) {
+    var customVendor = '#cloud-config\nruncmd:\n  - echo hello\n';
+    var payload = {
+        uuid: 'b4c7e1a2-3d5f-4e8a-9b0c-1d2e3f4a5b6c',
+        customer_metadata: {
+            'cloud-init:vendor-data': customVendor
+        }
+    };
+    var result = nocloud._vendorDataConfig(payload);
+
+    t.equal(result, undefined,
+        'vendor-data in customer_metadata is not used');
+    t.end();
+});
+
+test('_vendorDataConfig prefers set_internal_metadata', function (t) {
     var setVendor = '#cloud-config\nruncmd:\n  - echo set\n';
     var oldVendor = '#cloud-config\nruncmd:\n  - echo old\n';
     var payload = {
         uuid: 'b4c7e1a2-3d5f-4e8a-9b0c-1d2e3f4a5b6c',
-        set_customer_metadata: {
+        set_internal_metadata: {
             'cloud-init:vendor-data': setVendor
         },
-        customer_metadata: {
+        internal_metadata: {
             'cloud-init:vendor-data': oldVendor
         }
     };
     var result = nocloud._vendorDataConfig(payload);
 
     t.equal(result, setVendor,
-        'prefers set_customer_metadata for vendor-data');
+        'prefers set_internal_metadata for vendor-data');
     t.end();
 });
 

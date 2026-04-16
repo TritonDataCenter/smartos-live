@@ -330,6 +330,22 @@ tab-complete UUIDs rather than having to type them out for every command.
             You can specify multiple disk options when booting a VM. They will
             be attached in the order they appear on the command line.
 
+          migrate-listen=true
+
+            For bhyve live migration only.  Starts the destination-side bhyve
+            in migrate-listen mode: skip bootrom and vcpu_reset, hibernate
+            block-backed devices so the final `zfs recv` can complete, then
+            block on the in-zone control socket at
+            /zones/<uuid>/root/tmp/bhyve.sock waiting for the GZ migration
+            agent to deliver the imported guest state via import-state.
+            The VM appears hung from outside until import completes; `vmadm
+            stop -F` will terminate it if the migration never arrives.
+
+            This option is intended for the live-migration tooling, not for
+            direct operator use.  It is not persisted across reboots: the
+            underlying zonecfg attribute is set just before zoneadm boot
+            and cleared immediately after.
+
       stop <uuid> [-F] [-t timeout]
 
         Stop a VM. The default stop will attempt to be graceful.  This ensures

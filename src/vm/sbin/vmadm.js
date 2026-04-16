@@ -314,6 +314,7 @@ function parseKeyEqualsValue(args, multiple)
 function parseStartArgs(args)
 {
     var extra = {};
+    var options = {};
     var model;
     var p;
     var pair;
@@ -347,6 +348,21 @@ function parseStartArgs(args)
                     extra.disks = [];
                 }
                 extra.disks.push({path: p, model: model, media: key});
+            } else if (key === 'migrate-listen' || key === 'migrate_listen') {
+                // bhyve live-migration destination-side startup.  The
+                // destination bhyve enters migrate-listen mode (skip
+                // bootrom + vcpu_reset, block on the control socket
+                // waiting for import-state).  Live-migration tooling
+                // is the only expected caller; mis-using this from the
+                // CLI just produces a VM that appears hung waiting for
+                // state that will never arrive — it is safe to kill
+                // with `vmadm stop`.  Accepted only as part of VM.start
+                // options, never written to persistent VM state.
+                if (val !== 'true' && val !== 'false') {
+                    usage('migrate-listen must be true or false');
+                    // NOTREACHED
+                }
+                options.migrate_listen = (val === 'true');
             } else {
                 usage('Invalid argument to start: ' + key);
                 // NOTREACHED
@@ -354,7 +370,7 @@ function parseStartArgs(args)
         }
     }
 
-    return extra;
+    return {extra: extra, options: options};
 }
 
 function parseInfoArgs(args)
@@ -464,9 +480,9 @@ function getInfo(uuid, types, callback)
     });
 }
 
-function startVM(uuid, extra, callback)
+function startVM(uuid, extra, options, callback)
 {
-    VM.start(uuid, extra, function (err, result) {
+    VM.start(uuid, extra, options, function (err, result) {
         var new_err;
 
         if (err) {
@@ -857,8 +873,9 @@ function main(callback)
     case 'start':
     case 'boot':
         uuid = getUUID(command, parsed);
-        extra = parseStartArgs(parsed.argv.remain);
-        startVM(uuid, extra, function (err) {
+        var startArgs = parseStartArgs(parsed.argv.remain);
+        extra = startArgs.extra;
+        startVM(uuid, extra, startArgs.options, function (err) {
             if (err) {
                 // if the error was because zone is already running (returned by
                 // VM.start()), we'll treat as noop and exit 0.

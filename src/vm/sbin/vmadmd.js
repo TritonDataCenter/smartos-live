@@ -507,7 +507,24 @@ function spawnConsoleProxy(vmobj)
             cleanup();
         });
 
-        // For non-KVM brands, perform zoneadmd console handshake
+        /*
+         * Zoneadmd Console Handshake Protocol
+         *
+         * Non-KVM brands (Bhyve, Joyent, LX) use zoneadmd for console access.
+         * The console socket at /var/run/zones/<zonename>.console_sock requires
+         * a handshake before data flows:
+         *
+         * 1. Client sends: "IDENT C 0\n"
+         *    - C = console type (as opposed to L for login)
+         *    - 0 = flags (unused)
+         *
+         * 2. Server responds: "OK\n" on success
+         *    - Any other response indicates handshake failure
+         *
+         * Timeout: CONSOLE_HANDSHAKE_TIMEOUT (5000ms)
+         *
+         * See: usr/src/cmd/zlogin/zlogin.c in illumos-joyent
+         */
         if (!isKvm) {
             // Set timeout for handshake completion
             handshakeTimer = setTimeout(function() {

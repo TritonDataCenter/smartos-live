@@ -824,11 +824,13 @@ update_boot_sectors() {
 			# will get set.
 		else
 			# Plow through devices, even if some fail.
-			# installboot also does
+			# NOTE1: installboot also does
 			# loader-into-EFI-System-Partition this way.
-			# Trailing / is important in the -b argument
+			# NOTE2: Trailing / is important in the -b argument
 			# because boot is actually a symlink.
-			if installboot -m -b "/${bootfs}/boot/" \
+			# NOTE3: We need to use -F here so we can revert boot
+			# bits if asked.
+			if installboot -F -m -b "/${bootfs}/boot/" \
 				"/${bootfs}/boot/pmbr" \
 				"/${bootfs}/boot/gptzfsboot" \
 				"/dev/rdsk/${a}${suffix}" > /dev/null 2>&1 ; then

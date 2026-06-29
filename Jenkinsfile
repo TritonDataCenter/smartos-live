@@ -97,19 +97,19 @@ pipeline {
             name: 'SKIP_DEFAULT',
             defaultValue: false,
             description: 'This parameter, if set, will skip the build of the ' +
-                'default stage (that's run in parallel).'
+                'default stage (which is run in parallel).'
         )
         booleanParam(
             name: 'SKIP_DEBUG',
             defaultValue: false,
             description: 'This parameter, if set, will skip the build of the ' +
-                'debug stage (that's run in parallel).'
+                'debug stage (which is run in parallel).'
         )
         booleanParam(
             name: 'SKIP_OTHER_COMPILER',
             defaultValue: false,
             description: 'This parameter, if set, will skip the build of the ' +
-                'alternate-compiler (gcc14) stage (that's run in parallel).'
+                'alternate-compiler (gcc14) stage (which is run in parallel).'
         )
         booleanParam(
             name: 'BUILD_STRAP_CACHE',

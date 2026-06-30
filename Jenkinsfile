@@ -171,8 +171,8 @@ set -o pipefail
             }
         }
 	stage('build-variants') {
+        failFast ${FAIL_FAST}
         parallel {
-            failFast ${FAIL_FAST}
             stage('default') {
                 agent {
                     // There seems to be a Jenkins bug where ${WORKSPACE} isn't

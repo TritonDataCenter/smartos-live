@@ -93,7 +93,7 @@ pipeline {
                 '</ul></p>'
         )
         booleanParam(
-            name: 'FAIL_FAST',
+            name: 'failFast',
             defaultValue: true,
             description: 'This parameter, if set, will cause any stage to ' +
                 'stop the other stages in mid-build.'
@@ -171,7 +171,6 @@ set -o pipefail
             }
         }
 	stage('build-variants') {
-        failFast ${FAIL_FAST}
         parallel {
             stage('default') {
                 agent {

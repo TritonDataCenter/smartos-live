@@ -17,7 +17,6 @@ pipeline {
     options {
         buildDiscarder(logRotator(numToKeepStr: '30'))
         timestamps()
-        parallelsAlwaysFailFast()
     }
     // Don't assign a specific agent for the entire job, in order to better
     // share resources across jobs. Otherwise, we'd tie up an agent here for
@@ -94,6 +93,12 @@ pipeline {
                 '</ul></p>'
         )
         booleanParam(
+            name: 'FAIL_FAST',
+            defaultValue: true,
+            description: 'This parameter, if set, will cause any stage to ' +
+                'stop the other stages in mid-build.'
+        )
+        booleanParam(
             name: 'SKIP_DEFAULT',
             defaultValue: false,
             description: 'This parameter, if set, will skip the build of the ' +
@@ -159,7 +164,7 @@ set -o pipefail
                 always {
                     cleanWs cleanWhenSuccess: true,
                         cleanWhenFailure: false,
-                        cleanWhenAborted: true,
+                         cleanWhenAborted: true,
                         cleanWhenNotBuilt: true,
                         deleteDirs: true
                 }
@@ -167,6 +172,7 @@ set -o pipefail
         }
 	stage('build-variants') {
         parallel {
+            failFast ${FAIL_FAST}
             stage('default') {
                 agent {
                     // There seems to be a Jenkins bug where ${WORKSPACE} isn't

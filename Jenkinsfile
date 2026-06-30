@@ -164,7 +164,7 @@ set -o pipefail
                 always {
                     cleanWs cleanWhenSuccess: true,
                         cleanWhenFailure: false,
-                         cleanWhenAborted: true,
+                        cleanWhenAborted: true,
                         cleanWhenNotBuilt: true,
                         deleteDirs: true
                 }

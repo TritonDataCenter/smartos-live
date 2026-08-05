@@ -6,6 +6,7 @@
 #
 # Copyright 2022 Joyent, Inc.
 # Copyright 2024 MNX Cloud, Inc.
+# Copyright 2026 Edgecast Cloud LLC.
 #
 
 function fatal () {
@@ -39,8 +40,8 @@ root="/${1}"
 # pkgsrc.smartos.org for changes. Old boostrap tars are kept around indefinitely,
 # so there's no particular urgency for getting it done when a new bootstrap
 # is available, but we'll want to stay relatively up to date.
-BOOTSTRAP_TAR="bootstrap-trunk-tools-20240116.tar.gz"
-BOOTSTRAP_SHA="8c104974605e7404edd9d10b9429bdf1d9b3bb60"
+BOOTSTRAP_TAR="bootstrap-trunk-tools-20260804.tar.gz"
+BOOTSTRAP_SHA="703e6b381320e1176ee84587a1430e0994aeff71"
 
 cd /tmp || fatal 'cd to /tmp failed'
 

@@ -1,4 +1,5 @@
 // Copyright 2015 Joyent, Inc.  All rights reserved.
+// Copyright 2022 MNX Cloud, Inc.
 
 var brand;
 var os_brands = ['joyent', 'joyent-minimal'];
@@ -534,7 +535,7 @@ for (brand in os_brands) {
             image_uuid: '01b2c898-945f-11e1-a523-af1afbe22822',
             delegate_dataset: 'true',
             do_not_inventory: 'true',
-            dns_domain: 'joyent.com',
+            dns_domain: 'tritondatacenter.com',
             filesystems: [{type: 'lofs', source: '/var/tmp', target: '/gztmp', options: ['ro', 'nodevices']}],
             fs_allowed: ['ufs', 'tmpfs', 'pcfs'],
             hostname: 'maximumpower',

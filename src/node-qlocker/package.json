@@ -26,7 +26,7 @@
     "fs-ext": "git+https://github.com/joyent/node-fs-ext.git#node-0.10"
   },
   "devDependencies": {
-    "tap": "12.7.0",
+    "tap": "21.1.3",
     "vasync": "2.2.0",
     "assert-plus": "1.0.0"
   }

@@ -292,6 +292,27 @@ test('test create with invalid IP', function (t) {
     );
 });
 
+test('test create with invalid brand', function (t) {
+    var p = {
+        alias: 'test-create-' + process.pid,
+        autoboot: false,
+        brand: 'smartos',
+        do_not_inventory: true,
+        image_uuid: vmtest.CURRENT_SMARTOS_UUID,
+        max_physical_memory: 512,
+        quota: 10
+    };
+
+    VM.create(p, function (err) {
+        t.ok(err, 'VM.create returned an error');
+        if (err) {
+            t.ok(/[Uu]nsupported brand/.test(err.message),
+                'rejected unsupported brand cleanly: ' + err.message);
+        }
+        t.end();
+    });
+});
+
 test('test create with tags', function (t) {
 
     var p = JSON.parse(JSON.stringify(payload_with_tags));

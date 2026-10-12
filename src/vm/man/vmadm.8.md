@@ -1021,13 +1021,16 @@ tab-complete UUIDs rather than having to type them out for every command.
 
     disks.*.size:
 
-        Size of disk in MiB. You should only specify this parameter if you've
-        not included the image_* parameters. It will show up in get requests
-        for all disks whether you've specified or not as a means to determine
-        the size of the zvol.
+        Size of disk in MiB. It will show up in get requests for all disks
+        whether you've specified or not as a means to determine the size of
+        the zvol.
 
-        Important: size is required when you don't include image_uuid for a disk
-        and not allowed when you do.
+        Important: size is required when you don't include image_uuid for a
+        disk. When you do include image_uuid, size is optional: without it the
+        disk is the size of the image, and with it the disk is created that
+        size, which must be at least the size of the image. Whether the guest
+        uses the extra space is up to the guest (for example, cloud-init can
+        grow its root filesystem to fill the disk).
 
         type: integer (size in MiB)
         vmtype: HVM

@@ -28,6 +28,8 @@
 var assert = require('/usr/node/node_modules/assert-plus');
 var async = require('/usr/node/node_modules/async');
 var bunyan = require('/usr/node/node_modules/bunyan');
+var ConsoleBroker =
+    require('/usr/vm/node_modules/console_broker').ConsoleBroker;
 var cp = require('child_process');
 var EventEmitter = require('events').EventEmitter;
 var execFile = cp.execFile;
@@ -63,6 +65,7 @@ var REPORTED_STATES = ['running', 'stopped'];
 var VMADMD_PORT = 8080;
 var VMADMD_AUTOBOOT_FILE = '/tmp/.autoboot_vmadmd';
 
+var CONSOLE_BROKER = null;
 var PROV_WAIT = {};
 var SDC = {};
 var SPICE = {};
@@ -409,6 +412,17 @@ function reloadRemoteDisplay(vmobj)
     log.info('reloading remote display for ' + vmobj.uuid);
     clearRemoteDisplay(vmobj.uuid);
     spawnRemoteDisplay(vmobj);
+}
+
+function getConsoleBroker()
+{
+    if (CONSOLE_BROKER === null) {
+        CONSOLE_BROKER = new ConsoleBroker({
+            log: log.child({component: 'console'}),
+            host: SDC.sysinfo.admin_ip
+        });
+    }
+    return (CONSOLE_BROKER);
 }
 
 function clearTimer(uuid)
@@ -917,6 +931,11 @@ function updateZoneStatus(ev)
     } else if (ev.newstate === 'uninitialized') {
         log.trace('emitting: stopped, ' + ev.zonename);
         stateReporter.emit('stopped', ev.zonename);
+    }
+
+    // VMs always have zonename === uuid.
+    if (ev.oldstate === 'running' && CONSOLE_BROKER !== null) {
+        CONSOLE_BROKER.revoke(ev.zonename);
     }
 
     /*
@@ -1461,12 +1480,16 @@ function infoVM(uuid, types, callback)
 
     load_fields = [
         'brand',
+        'docker',
         'state',
         'uuid',
+        'zonename',
         'zonepath'
     ];
 
     VM.load(uuid, {fields: load_fields}, function (err, vmobj) {
+        var finish = callback;
+
         if (err) {
             callback(new Error('Unable to load vm: ' + JSON.stringify(err)));
             return;
@@ -1474,7 +1497,7 @@ function infoVM(uuid, types, callback)
 
         if (!loadCbs.hasOwnProperty(vmobj.brand)) {
             callback(new Error('vmadmd only handles "info" for: "'
-                + vmobj.keys.join('", "') + '".  Your brand is: "'
+                + Object.keys(loadCbs).join('", "') + '".  Your brand is: "'
                 + vmobj.brand + '".'));
             return;
         }
@@ -1494,6 +1517,39 @@ function infoVM(uuid, types, callback)
         } catch (_err) {
             callback(_err);
             return;
+        }
+
+        /*
+         * A console ticket opens a listener, so it is only issued when asked
+         * for by name and never as part of 'all'.
+         */
+        if (types.indexOf('console') !== -1) {
+            types = types.filter(function (t) {
+                return (t !== 'console');
+            });
+            callback = function addConsoleTicket(infoErr, result) {
+                if (infoErr) {
+                    finish(infoErr);
+                    return;
+                }
+                if (!SDC.sysinfo.admin_ip) {
+                    finish(new Error('no admin IP, cannot issue console '
+                        + 'ticket'));
+                    return;
+                }
+                getConsoleBroker().issue(vmobj, function (tErr, ticket) {
+                    if (tErr) {
+                        finish(tErr);
+                        return;
+                    }
+                    result.console = ticket;
+                    finish(null, result);
+                });
+            };
+            if (types.length === 0) {
+                callback(null, res);
+                return;
+            }
         }
 
         loadCbs[vmobj.brand](vmobj);
@@ -1572,6 +1628,11 @@ function infoVM(uuid, types, callback)
             });
         });
     };
+
+    loadCbs.joyent = loadCbs['joyent-minimal'] = loadCbs.lx =
+        function loadOsCb(_vmobj) {
+            callback(null, res);
+        };
 
     loadCbs.bhyve = function loadBhyveCb(vmobj) {
         assert.object(vmobj);

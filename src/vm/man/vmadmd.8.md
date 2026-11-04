@@ -18,6 +18,8 @@ vmadmd(8) -- virtual machine management daemon
 
       * exposing KVM VM VNC consoles via TCP
 
+      * ticketed remote access to VM serial and zone consoles
+
       * handling stopping and rebooting timeouts for KVM VMs
 
       * handling sending QMP commands to KVM VMs
@@ -60,6 +62,25 @@ vmadmd(8) -- virtual machine management daemon
     The port chosen for the VNC console is random, but can be discovered
     through the 'vmadm info' command. Note that this port will change if either
     the VM or vmadmd are restarted.
+
+## Remote Console Sessions
+
+    'vmadm info <uuid> console' asks vmadmd for a console ticket. The ticket
+    holds the admin IP and a TCP port, and a random token that is valid for
+    one connection within 30 seconds. vmadmd only listens on that port while
+    tickets or connections are outstanding.
+
+    A client connects, sends the token followed by a newline, and gets back
+    either 'OK' and a newline followed by the raw console stream, or 'ERR
+    <reason>' and a newline before the connection is closed. KVM VMs are
+    connected to the serial console socket /zones/<uuid>/root/tmp/vm.console.
+    Other brands are connected to the zoneadmd console socket, the same one
+    zlogin -C uses.
+
+    Only one session per VM is allowed, and zoneadmd serves a single console
+    client, so a session fails with 'ERR busy' while zlogin -C is attached.
+    Sessions end after 30 minutes without traffic or 8 hours in total, and
+    tickets and sessions are dropped when the VM leaves the running state.
 
 ## Handling of Stop and Reboot
 
@@ -130,6 +151,11 @@ vmadmd(8) -- virtual machine management daemon
         version:
 
             Qemu version information.
+
+        console:
+
+            A remote console ticket, see "Remote Console Sessions" above. Only
+            returned when requested by name.
 
         vnc:
 

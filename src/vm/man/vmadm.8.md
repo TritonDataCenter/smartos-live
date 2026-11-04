@@ -114,17 +114,17 @@ tab-complete UUIDs rather than having to type them out for every command.
 
       info <uuid> [type,...]
 
-        The info command operates on running KVM VMs only. It talks to the
-        vmadmd(8) daemon and requests some information about the running VM.
-        The information is output to stdout as a JSON object with member
-        objects for each type specified. If no types are specified, all info
-        is included. The type values can be separated either by commas or
-        spaces.
+        The info command operates on running VMs. It talks to the vmadmd(8)
+        daemon and requests some information about the running VM. The
+        information is output to stdout as a JSON object with member objects
+        for each type specified. If no types are specified, all info is
+        included. The type values can be separated either by commas or spaces.
+        OS and LX VMs only support the console type.
 
         The info types available are:
 
         all:
-            Explicitly include all of the other types.
+            Explicitly include all of the other types except console.
 
         block:
             Information about the block devices attached to this VM.
@@ -136,6 +136,11 @@ tab-complete UUIDs rather than having to type them out for every command.
         chardev:
             Information about the special character devices attached to this
             VM.
+
+        console:
+            Issues a single-use ticket for a remote console session: the host,
+            port, token, console type (serial or zone) and expires_in seconds.
+            See vmadmd(8). Docker VMs are not supported.
 
         cpus:
             Information about the virtual CPUs attached to this VM.

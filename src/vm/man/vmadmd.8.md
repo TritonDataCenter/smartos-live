@@ -79,8 +79,8 @@ vmadmd(8) -- virtual machine management daemon
 
     Only one session per VM is allowed, and zoneadmd serves a single console
     client, so a session fails with 'ERR busy' while zlogin -C is attached.
-    Sessions end after 30 minutes without traffic, and tickets and sessions
-    are dropped when the VM leaves the running state.
+    Sessions end after 30 minutes without traffic or 8 hours in total, and
+    tickets and sessions are dropped when the VM leaves the running state.
 
 ## Handling of Stop and Reboot
 

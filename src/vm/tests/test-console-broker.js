@@ -409,7 +409,7 @@ test('unauthenticated connection times out', function (t) {
         c.on('error', function () {});
         c.on('close', function () {
             setTimeout(function () {
-                t.equal(broker.pending, 0);
+                t.equal(broker.pendingCount, 0);
                 broker.close();
                 t.done();
             }, 20);
@@ -470,6 +470,60 @@ test('old tickets are dropped past the per-VM limit', function (t) {
             t.equal(got, 'ERR invalid token\n');
             broker.close();
             t.done();
+        });
+    });
+});
+
+test('pending connection does not keep the listener alive', function (t) {
+    var broker = newBroker({ticketTtl: 50, authTimeout: 5000});
+
+    broker.issue(kvmVm(), function (err, ticket) {
+        t.ifError(err);
+        var c = net.connect(ticket.port, ticket.host);
+        c.on('error', function () {});
+        c.on('close', function () {
+            setTimeout(function () {
+                t.equal(broker.server, null, 'listener stopped');
+                t.equal(broker.pendingCount, 0);
+                t.done();
+            }, 20);
+        });
+    });
+});
+
+test('global ticket limit', function (t) {
+    var broker = newBroker({maxTickets: 1});
+
+    broker.issue(kvmVm(), function (err) {
+        t.ifError(err);
+        broker.issue(zoneVm(), function (err2) {
+            t.ok(err2, 'second ticket refused');
+            broker.close();
+            t.done();
+        });
+    });
+});
+
+test('session ends at maximum session time', function (t) {
+    var broker = newBroker({maxSessionTime: 50});
+
+    startKvmBackend(function () {
+        broker.issue(kvmVm(), function (err, ticket) {
+            t.ifError(err);
+            var iv;
+            var c = connect(ticket, undefined, function (got) {
+                if (got === 'OK\n') {
+                    // Keep traffic flowing so only the lifetime limit applies.
+                    iv = setInterval(function () {
+                        c.write('x');
+                    }, 10);
+                }
+            }, function () {
+                clearInterval(iv);
+                t.equal(Object.keys(broker.sessions).length, 0);
+                broker.close();
+                t.done();
+            });
         });
     });
 });

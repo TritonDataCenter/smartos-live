@@ -28,6 +28,8 @@
 var assert = require('/usr/node/node_modules/assert-plus');
 var async = require('/usr/node/node_modules/async');
 var bunyan = require('/usr/node/node_modules/bunyan');
+var ConsoleBroker =
+    require('/usr/vm/node_modules/console_broker').ConsoleBroker;
 var cp = require('child_process');
 var EventEmitter = require('events').EventEmitter;
 var execFile = cp.execFile;
@@ -63,11 +65,7 @@ var REPORTED_STATES = ['running', 'stopped'];
 var VMADMD_PORT = 8080;
 var VMADMD_AUTOBOOT_FILE = '/tmp/.autoboot_vmadmd';
 
-// Console proxy configuration
-var CONSOLE_HANDSHAKE_TIMEOUT = 5000;  // Timeout for zoneadmd handshake (ms)
-var CONSOLE_LOG_TRUNCATE_LEN = 100;    // Max chars to log from handshake errors
-
-var CONSOLE = {};
+var CONSOLE_BROKER = null;
 var PROV_WAIT = {};
 var SDC = {};
 var SPICE = {};
@@ -416,201 +414,15 @@ function reloadRemoteDisplay(vmobj)
     spawnRemoteDisplay(vmobj);
 }
 
-//
-// spawnConsoleProxy()
-//
-// Creates a TCP proxy for console access (serial console for KVM, zone console
-// for other brands).
-//
-// For KVM: Proxies to unix socket at <zonepath>/root/tmp/vm.console
-// For other brands: Proxies to zone console device at /dev/zcons/<zonename>/zoneconsole
-//
-// vmobj must have:
-//
-// brand
-// state
-// uuid
-// zonename
-// zonepath
-// zone_state
-//
-function spawnConsoleProxy(vmobj)
+function getConsoleBroker()
 {
-    var addr;
-    var consolePath;
-    var port = 0;  // Let the OS assign an ephemeral port
-    var server;
-    var zonepath = vmobj.zonepath;
-
-    if (!vmobj.zonepath) {
-        zonepath = '/zones/' + vmobj.uuid;
-    }
-
-    if (vmobj.state !== 'running' && vmobj.zone_state !== 'running') {
-        log.debug('skipping console setup for non-running VM ' + vmobj.uuid);
-        return;
-    }
-
-    // Determine console path based on brand
-    if (vmobj.brand === 'kvm') {
-        // KVM uses unix socket for serial console
-        consolePath = path.join(zonepath, '/root/tmp/vm.console');
-    } else {
-        // Bhyve, Joyent, LX, etc. use zoneadmd console socket
-        consolePath = '/var/run/zones/' + vmobj.zonename + '.console_sock';
-    }
-
-    // Create TCP server that proxies to console socket
-    server = net.createServer(function (c) {
-        var consoleSocket = new net.Socket();
-        var remote_address = '';
-        var isKvm = (vmobj.brand === 'kvm');
-        var handshakeDone = false;
-        var handshakeTimer = null;
-        var cleanedUp = false;
-
-        remote_address = '[' + c.remoteAddress + ']:' + c.remotePort;
-
-        // Cleanup function ensures all resources are properly released
-        function cleanup() {
-            if (cleanedUp) {
-                return;
-            }
-            cleanedUp = true;
-
-            if (handshakeTimer) {
-                clearTimeout(handshakeTimer);
-                handshakeTimer = null;
-            }
-
-            if (consoleSocket && !consoleSocket.destroyed) {
-                consoleSocket.destroy();
-            }
-        }
-
-        c.on('close', function (had_error) {
-            log.info('console connection ended from ' + remote_address +
-                ' for VM ' + vmobj.uuid);
-            cleanup();
+    if (CONSOLE_BROKER === null) {
+        CONSOLE_BROKER = new ConsoleBroker({
+            log: log.child({component: 'console'}),
+            host: SDC.sysinfo.admin_ip
         });
-
-        consoleSocket.on('error', function (err) {
-            log.warn('console socket error for VM ' + vmobj.uuid +
-                ': ' + err.message);
-            cleanup();
-            c.end();
-        });
-
-        c.on('error', function (err) {
-            log.warn('console net socket error for VM ' + vmobj.uuid +
-                ': ' + err.message);
-            cleanup();
-        });
-
-        /*
-         * Zoneadmd Console Handshake Protocol
-         *
-         * Non-KVM brands (Bhyve, Joyent, LX) use zoneadmd for console access.
-         * The console socket at /var/run/zones/<zonename>.console_sock requires
-         * a handshake before data flows:
-         *
-         * 1. Client sends: "IDENT C 0\n"
-         *    - C = console type (as opposed to L for login)
-         *    - 0 = flags (unused)
-         *
-         * 2. Server responds: "OK\n" on success
-         *    - Any other response indicates handshake failure
-         *
-         * Timeout: CONSOLE_HANDSHAKE_TIMEOUT (5000ms)
-         *
-         * See: usr/src/cmd/zlogin/zlogin.c in illumos-joyent
-         */
-        if (!isKvm) {
-            // Set timeout for handshake completion
-            handshakeTimer = setTimeout(function() {
-                if (!handshakeDone) {
-                    log.error('console handshake timeout for VM ' + vmobj.uuid);
-                    cleanup();
-                    c.end();
-                }
-            }, CONSOLE_HANDSHAKE_TIMEOUT);
-
-            consoleSocket.once('connect', function () {
-                // Send zlogin-C handshake: IDENT <locale> <flags>\n
-                consoleSocket.write('IDENT C 0\n');
-
-                // Wait for OK response before starting data flow
-                consoleSocket.once('data', function (data) {
-                    clearTimeout(handshakeTimer);
-                    handshakeTimer = null;
-
-                    if (data.toString().trim() === 'OK') {
-                        handshakeDone = true;
-                        // Now start bidirectional pipe
-                        c.pipe(consoleSocket);
-                        consoleSocket.pipe(c);
-                    } else {
-                        log.error('console handshake failed for VM ' + vmobj.uuid +
-                            ': ' + data.toString().substring(0, CONSOLE_LOG_TRUNCATE_LEN));
-                        cleanup();
-                        c.end();
-                    }
-                });
-            });
-        } else {
-            // KVM brand: pipe immediately (no handshake needed)
-            handshakeDone = true;
-            c.pipe(consoleSocket);
-            consoleSocket.pipe(c);
-        }
-
-        // Connect to console socket
-        consoleSocket.connect(consolePath);
-    });
-
-    log.info('spawning console listener for ' + vmobj.uuid +
-        ' on ' + SDC.sysinfo.admin_ip + ' (brand: ' + vmobj.brand + ')');
-
-    server.on('connection', function (sock) {
-        log.info('console connection started from [' +
-            sock.remoteAddress + ']:' + sock.remotePort + ' for VM ' + vmobj.uuid);
-    });
-
-    server.on('error', function (err) {
-        log.error('console server error for VM ' + vmobj.uuid + ': ' + err.message);
-    });
-
-    server.listen(port, SDC.sysinfo.admin_ip, function () {
-        addr = server.address();
-
-        CONSOLE[vmobj.uuid] = {
-            'host': SDC.sysinfo.admin_ip,
-            'port': addr.port,
-            'server': server,
-            'type': 'socket',
-            'path': consolePath
-        };
-
-        log.info('console proxy for ' + vmobj.uuid + ' listening on ' +
-            SDC.sysinfo.admin_ip + ':' + addr.port +
-            ' (type: ' + CONSOLE[vmobj.uuid].type + ', path: ' + consolePath + ')');
-    });
-}
-
-function clearConsoleProxy(uuid)
-{
-    if (CONSOLE[uuid] && CONSOLE[uuid].server) {
-        log.info('clearing console proxy for ' + uuid);
-        CONSOLE[uuid].server.close();
     }
-    delete CONSOLE[uuid];
-}
-
-function reloadConsoleProxy(vmobj)
-{
-    log.info('reloading console proxy for ' + vmobj.uuid);
-    clearConsoleProxy(vmobj.uuid);
-    spawnConsoleProxy(vmobj);
+    return (CONSOLE_BROKER);
 }
 
 function clearTimer(uuid)
@@ -624,7 +436,6 @@ function clearTimer(uuid)
 function clearVM(uuid)
 {
     clearRemoteDisplay(uuid);
-    clearConsoleProxy(uuid);
     clearTimer(uuid);
 }
 
@@ -719,7 +530,6 @@ function handleProvisioning(vmobj, cb)
                         rotateKVMLog(vmobj.uuid);
                     }
                     spawnRemoteDisplay(obj);
-                    spawnConsoleProxy(obj);
                 }
                 cb(null, 'success');
             });
@@ -1123,6 +933,11 @@ function updateZoneStatus(ev)
         stateReporter.emit('stopped', ev.zonename);
     }
 
+    // VMs always have zonename === uuid.
+    if (ev.oldstate === 'running' && CONSOLE_BROKER !== null) {
+        CONSOLE_BROKER.revoke(ev.zonename);
+    }
+
     /*
      * State changes we care about:
      *
@@ -1343,7 +1158,6 @@ function updateZoneStatus(ev)
                 rotateKVMLog(vmobj.uuid);
             }
             spawnRemoteDisplay(vmobj);
-            spawnConsoleProxy(vmobj);
         } else if (ev.oldstate === 'running') {
             if (VNC.hasOwnProperty(ev.zonename)) {
                 // VMs always have zonename === uuid, so we can remove this
@@ -1666,12 +1480,16 @@ function infoVM(uuid, types, callback)
 
     load_fields = [
         'brand',
+        'docker',
         'state',
         'uuid',
+        'zonename',
         'zonepath'
     ];
 
     VM.load(uuid, {fields: load_fields}, function (err, vmobj) {
+        var finish = callback;
+
         if (err) {
             callback(new Error('Unable to load vm: ' + JSON.stringify(err)));
             return;
@@ -1679,7 +1497,7 @@ function infoVM(uuid, types, callback)
 
         if (!loadCbs.hasOwnProperty(vmobj.brand)) {
             callback(new Error('vmadmd only handles "info" for: "'
-                + vmobj.keys.join('", "') + '".  Your brand is: "'
+                + Object.keys(loadCbs).join('", "') + '".  Your brand is: "'
                 + vmobj.brand + '".'));
             return;
         }
@@ -1699,6 +1517,39 @@ function infoVM(uuid, types, callback)
         } catch (_err) {
             callback(_err);
             return;
+        }
+
+        /*
+         * A console ticket opens a listener, so it is only issued when asked
+         * for by name and never as part of 'all'.
+         */
+        if (types.indexOf('console') !== -1) {
+            types = types.filter(function (t) {
+                return (t !== 'console');
+            });
+            callback = function addConsoleTicket(infoErr, result) {
+                if (infoErr) {
+                    finish(infoErr);
+                    return;
+                }
+                if (!SDC.sysinfo.admin_ip) {
+                    finish(new Error('no admin IP, cannot issue console '
+                        + 'ticket'));
+                    return;
+                }
+                getConsoleBroker().issue(vmobj, function (tErr, ticket) {
+                    if (tErr) {
+                        finish(tErr);
+                        return;
+                    }
+                    result.console = ticket;
+                    finish(null, result);
+                });
+            };
+            if (types.length === 0) {
+                callback(null, res);
+                return;
+            }
         }
 
         loadCbs[vmobj.brand](vmobj);
@@ -1772,16 +1623,16 @@ function infoVM(uuid, types, callback)
                             }
                         }
                     }
-                    if ((types.indexOf('all') !== -1)
-                        || (types.indexOf('console') !== -1)) {
-
-                        infoConsole();
-                    }
                     callback(null, res);
                 }
             });
         });
     };
+
+    loadCbs.joyent = loadCbs['joyent-minimal'] = loadCbs.lx =
+        function loadOsCb(_vmobj) {
+            callback(null, res);
+        };
 
     loadCbs.bhyve = function loadBhyveCb(vmobj) {
         assert.object(vmobj);
@@ -1790,23 +1641,8 @@ function infoVM(uuid, types, callback)
         if (types.indexOf('all') !== -1 || types.indexOf('vnc') !== -1) {
             infoVNC();
         }
-        if (types.indexOf('all') !== -1 || types.indexOf('console') !== -1) {
-            infoConsole();
-        }
         callback(null, res);
     };
-
-    // Generic callback for other brands (joyent, lx, etc.) - only console info
-    loadCbs.joyent = loadCbs['joyent-minimal'] = loadCbs.lx =
-        function loadGenericCb(vmobj) {
-            assert.object(vmobj);
-            assert.uuid(vmobj.uuid);
-
-            if (types.indexOf('all') !== -1 || types.indexOf('console') !== -1) {
-                infoConsole();
-            }
-            callback(null, res);
-        };
 
     function infoVNC() {
         res.vnc = {};
@@ -1821,15 +1657,6 @@ function infoVM(uuid, types, callback)
 
                 res.vnc.password = VNC[uuid].password;
             }
-        }
-    }
-
-    function infoConsole() {
-        res.console = {};
-        if (CONSOLE.hasOwnProperty(uuid)) {
-            res.console.host = CONSOLE[uuid].host;
-            res.console.port = CONSOLE[uuid].port;
-            res.console.type = CONSOLE[uuid].type;
         }
     }
 }
@@ -2065,9 +1892,6 @@ function loadVM(vmobj, do_autoboot)
 
     // Start Remote Display
     spawnRemoteDisplay(vmobj);
-
-    // Start Console Proxy
-    spawnConsoleProxy(vmobj);
 }
 
 // To help diagnose problems we write the keys we're watching to the TRACE log
@@ -2765,10 +2589,6 @@ function main()
                             });
                         } else {
                             log.debug('ignoring non-kvm VM ' + vmobj.uuid);
-                            // Still spawn console proxy for non-KVM running VMs
-                            if (vmobj.state === 'running' || vmobj.zone_state === 'running') {
-                                spawnConsoleProxy(vmobj);
-                            }
                             upg_cb();
                         }
                     }

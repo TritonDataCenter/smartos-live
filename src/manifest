@@ -474,6 +474,7 @@ f usr/node/0.10/node_modules/fs-ext/build/Release/fs-ext.node 0555 root bin
 f usr/node/0.10/node_modules/fs-ext/fs-ext.js 0444 root bin
 f usr/node/0.10/node_modules/fs-ext/package.json 0444 root bin
 f usr/vm/node_modules/bunyan.js 0444 root bin
+f usr/vm/node_modules/console_broker.js 0444 root bin
 f usr/vm/node_modules/diff.js 0644 root root
 f usr/vm/node_modules/dladm.js 0444 root bin
 f usr/vm/node_modules/expander.js 0444 root bin

@@ -83,6 +83,7 @@ JS_CHECK_TARGETS=\
 	node_modules/{system,onlyif,net-boot-config}.js \
 	net-boot-config \
 	vm/sbin/*.js \
+	vm/node_modules/console_broker.js \
 	vm/node_modules/diff.js \
 	vm/node_modules/dladm.js \
 	vm/node_modules/expander.js \
@@ -107,6 +108,7 @@ JS_CHECK_TARGETS=\
 	img/test/*.test.js \
 	vm/common/nictag.js \
 	vm/tests/common.js \
+	vm/tests/test-console-broker.js \
 	vm/tests/test-alias.js \
 	vm/tests/test-bhyve-disk-resize.js \
 	vm/tests/test-bhyve-pci.js \

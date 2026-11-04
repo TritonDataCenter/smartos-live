@@ -527,3 +527,35 @@ test('session ends at maximum session time', function (t) {
         });
     });
 });
+
+test('rejected clients are disconnected even if they never close',
+    function (t) {
+    var broker = newBroker();
+
+    broker.issue(kvmVm(), function (err, ticket) {
+        t.ifError(err);
+        var c = net.connect({port: ticket.port, host: ticket.host,
+            allowHalfOpen: true});
+        var got = '';
+        c.on('connect', function () {
+            c.write(new Array(65).join('0') + '\n');
+        });
+        c.on('error', function () {});
+        c.on('data', function (d) {
+            got += d.toString();
+        });
+        // Keep our side open after the broker's FIN, like a bad client.
+        c.on('end', function () {
+            t.equal(got, 'ERR invalid token\n');
+            setTimeout(function () {
+                broker.server.getConnections(function (gErr, n) {
+                    t.ifError(gErr);
+                    t.equal(n, 0, 'broker closed its side');
+                    c.destroy();
+                    broker.close();
+                    t.done();
+                });
+            }, 1500);
+        });
+    });
+});

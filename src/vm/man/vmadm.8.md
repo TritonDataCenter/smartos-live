@@ -2326,6 +2326,11 @@ tab-complete UUIDs rather than having to type them out for every command.
         This property is used to set/show the maximum size for a docker zone's
         stdio.log file before zoneadmd(8) will rotate it.
 
+        For a docker zone using the json-file log driver, a create or update
+        payload that sets internal_metadata 'docker:logconfig' also sets this
+        property from its 'max-size' option (k, m and g are powers of 1000),
+        unless the same payload sets zlog_max_size.
+
         type: integer (size in bytes)
         vmtype: ANY
         listable: no
@@ -2340,6 +2345,15 @@ tab-complete UUIDs rather than having to type them out for every command.
         older rotated logs beyond this count are removed. A value of 0
         removes the property. Changes take effect the next time the zone
         boots.
+
+        For a docker zone using the json-file log driver, a create or update
+        payload that sets internal_metadata 'docker:logconfig' also sets this
+        property from its 'max-file' option, unless the same payload sets
+        zlog_keep_rotated. docker counts the live log in max-file, so the
+        value is max-file - 1, at least 1 and at most 1000. Invalid options
+        are logged and ignored. To apply this to an existing zone, update
+        'docker:logconfig' (setting it to its current value is enough) and
+        reboot the zone.
 
         type: integer (0 - 1000)
         vmtype: ANY

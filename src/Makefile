@@ -85,6 +85,7 @@ JS_CHECK_TARGETS=\
 	vm/sbin/*.js \
 	vm/node_modules/diff.js \
 	vm/node_modules/dladm.js \
+	vm/node_modules/docker-logconfig.js \
 	vm/node_modules/expander.js \
 	vm/node_modules/fswatcher.js \
 	vm/node_modules/hrtime.js \
@@ -117,6 +118,7 @@ JS_CHECK_TARGETS=\
 	vm/tests/test-defaults.js \
 	vm/tests/test-disk-uuid.js \
 	vm/tests/test-docker.js \
+	vm/tests/test-docker-logconfig.js \
 	vm/tests/test-firewall.js \
 	vm/tests/test-fswatcher.js \
 	vm/tests/test-hrtime.js \

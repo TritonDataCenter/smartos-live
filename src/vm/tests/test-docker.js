@@ -1300,6 +1300,132 @@ test('test docker VM with good zlog_keep_rotated', function (t) {
     ]);
 });
 
+/**
+ * Returns an async step that loads the VM and checks its zlog properties.
+ *
+ * @param {Object} t - nodeunit test
+ * @param {Object} state - vmtest state holding the VM uuid
+ * @param {Object} want - expected zlog_max_size and zlog_keep_rotated
+ * @param {String} desc - assertion description
+ * @returns {Function} async step taking a callback
+ */
+function checkZlogProps(t, state, want, desc) {
+    return function _checkZlogProps(cb) {
+        VM.load(state.uuid, function (err, obj) {
+            t.ok(!err, 'Load VM' + (err ? ': ' + err.message : ''));
+            if (!err) {
+                t.equal(obj.zlog_max_size, want.zlog_max_size,
+                    desc + ': zlog_max_size');
+                t.equal(obj.zlog_keep_rotated, want.zlog_keep_rotated,
+                    desc + ': zlog_keep_rotated');
+            }
+            cb(err);
+        });
+    };
+}
+
+/**
+ * Returns an async step that updates the VM's docker:logconfig.
+ *
+ * @param {Object} t - nodeunit test
+ * @param {Object} state - vmtest state holding the VM uuid
+ * @param {String} logconfig - new docker:logconfig value
+ * @returns {Function} async step taking a callback
+ */
+function updateLogConfig(t, state, logconfig) {
+    return function _updateLogConfig(cb) {
+        VM.update(state.uuid, {
+            set_internal_metadata: {'docker:logconfig': logconfig}
+        }, function (err) {
+            t.ok(!err, 'Update docker:logconfig=' + logconfig
+                + (err ? ': ' + err.message : ''));
+            cb(err);
+        });
+    };
+}
+
+test('test docker:logconfig sets zlog properties on create',
+    function (t) {
+
+    var payload = JSON.parse(JSON.stringify(common_payload));
+    var state = {brand: payload.brand};
+
+    payload.docker = true;
+    payload.internal_metadata = {
+        'docker:logdriver': 'json-file',
+        'docker:logconfig': '{"max-file":"3","max-size":"30m"}'
+    };
+
+    vmtest.on_new_vm(t, image_uuid, payload, state, [
+        checkZlogProps(t, state,
+            {zlog_max_size: 30000000, zlog_keep_rotated: 2},
+            'derived from docker:logconfig')
+    ]);
+});
+
+test('test explicit zlog properties win over docker:logconfig',
+    function (t) {
+
+    var payload = JSON.parse(JSON.stringify(common_payload));
+    var state = {brand: payload.brand};
+
+    payload.docker = true;
+    payload.zlog_max_size = 1048576;
+    payload.zlog_keep_rotated = 5;
+    payload.internal_metadata = {
+        'docker:logconfig': '{"max-file":"3","max-size":"30m"}'
+    };
+
+    vmtest.on_new_vm(t, image_uuid, payload, state, [
+        checkZlogProps(t, state,
+            {zlog_max_size: 1048576, zlog_keep_rotated: 5},
+            'explicit properties kept')
+    ]);
+});
+
+test('test docker:logconfig update sets zlog properties', function (t) {
+    var payload = JSON.parse(JSON.stringify(common_payload));
+    var state = {brand: payload.brand};
+
+    payload.docker = true;
+
+    vmtest.on_new_vm(t, image_uuid, payload, state, [
+        checkZlogProps(t, state, {}, 'no docker:logconfig'),
+        updateLogConfig(t, state, '{"max-file":"4"}'),
+        checkZlogProps(t, state, {zlog_keep_rotated: 3},
+            'max-file from update'),
+        updateLogConfig(t, state, '{"max-file":"2","max-size":"2m"}'),
+        checkZlogProps(t, state,
+            {zlog_max_size: 2000000, zlog_keep_rotated: 1},
+            'second update replaces values'),
+        updateLogConfig(t, state, '{"max-file":"0","max-size":"x"}'),
+        checkZlogProps(t, state,
+            {zlog_max_size: 2000000, zlog_keep_rotated: 1},
+            'invalid options leave values unchanged'),
+        updateLogConfig(t, state, 'not json'),
+        checkZlogProps(t, state,
+            {zlog_max_size: 2000000, zlog_keep_rotated: 1},
+            'invalid JSON leaves values unchanged')
+    ]);
+});
+
+test('test docker:logconfig ignored for non json-file driver',
+    function (t) {
+
+    var payload = JSON.parse(JSON.stringify(common_payload));
+    var state = {brand: payload.brand};
+
+    payload.docker = true;
+    payload.internal_metadata = {
+        'docker:logdriver': 'none',
+        'docker:logconfig': '{"max-file":"3","max-size":"30m"}'
+    };
+
+    vmtest.on_new_vm(t, image_uuid, payload, state, [
+        checkZlogProps(t, state, {}, 'logdriver none')
+    ]);
+});
+
 /*
  * Tries to determine if the array of (Number) values is generally going up or
  * down. Returns -1 if more downs than ups, 1 if more ups than downs and 0 if

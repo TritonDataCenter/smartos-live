@@ -2333,6 +2333,21 @@ tab-complete UUIDs rather than having to type them out for every command.
         update: yes
         default: none (no rotation)
 
+    zlog_keep_rotated:
+
+        This property is used to set/show the number of rotated stdio.log
+        files zoneadmd(8) keeps for a docker zone. When a log is rotated,
+        older rotated logs beyond this count are removed. A value of 0
+        removes the property. Changes take effect the next time the zone
+        boots.
+
+        type: integer (0 - 1000)
+        vmtype: ANY
+        listable: no
+        create: yes
+        update: yes
+        default: none (keep all rotated logs)
+
     zlog_mode:
 
         This property will show up for docker zones and indicates which mode the

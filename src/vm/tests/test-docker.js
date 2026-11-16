@@ -1219,6 +1219,88 @@ test('test docker VM with good zlog_max_size', function (t) {
 });
 
 /*
+ * zlog_keep_rotated must be an integer in [0, 1000]; zoneadmd clamps
+ * larger values, so vmadm rejects them instead.
+ */
+[
+    ['non-integer', 'abc123'],
+    ['negative', -1],
+    ['too large', 1001]
+].forEach(function (tc) {
+    test('test docker VM with ' + tc[0] + ' zlog_keep_rotated',
+        function (t) {
+
+        var payload = JSON.parse(JSON.stringify(common_payload));
+        var state = {brand: payload.brand, expect_create_failure: true};
+
+        payload.docker = true;
+        payload.autoboot = false;
+        payload.zlog_keep_rotated = tc[1];
+
+        vmtest.on_new_vm(t, image_uuid, payload, state, []);
+    });
+});
+
+test('test docker VM with good zlog_keep_rotated', function (t) {
+    var payload = JSON.parse(JSON.stringify(common_payload));
+    var state = {brand: payload.brand};
+
+    payload.docker = true;
+    payload.zlog_keep_rotated = 3;
+
+    /*
+     * Updates the VM to the given value and checks the loaded value.
+     * 0 removes the attribute, so load must not return the property.
+     */
+    function updateAndCheck(value, expected) {
+        return function _updateAndCheck(_cb) {
+            VM.update(state.uuid, {zlog_keep_rotated: value},
+                function (err) {
+
+                t.ok(!err, 'Update zlog_keep_rotated=' + value
+                    + (err ? ': ' + err.message : ''));
+                if (err) {
+                    _cb(err);
+                    return;
+                }
+
+                VM.load(state.uuid, function (lerr, obj) {
+                    t.ok(!lerr, 'Load VM after update'
+                        + (lerr ? ': ' + lerr.message : ''));
+                    if (!lerr) {
+                        t.equal(obj.zlog_keep_rotated, expected,
+                            'VM has correct zlog_keep_rotated');
+                    }
+                    _cb(lerr);
+                });
+            });
+        };
+    }
+
+    vmtest.on_new_vm(t, image_uuid, payload, state, [
+        function (cb) {
+            async.series([
+                function (_cb) {
+                    VM.load(state.uuid, function (err, obj) {
+                        t.ok(!err, 'Load VM'
+                            + (err ? ': ' + err.message : ''));
+                        if (!err) {
+                            t.equal(obj.zlog_keep_rotated, 3,
+                                'VM has correct zlog_keep_rotated');
+                        }
+                        _cb(err);
+                    });
+                },
+                updateAndCheck(1000, 1000),
+                updateAndCheck(0, undefined)
+            ], function _doneTest(err) {
+                cb(err);
+            });
+        }
+    ]);
+});
+
+/*
  * Tries to determine if the array of (Number) values is generally going up or
  * down. Returns -1 if more downs than ups, 1 if more ups than downs and 0 if
  * there are the same number of ups and downs or the values are all equal.

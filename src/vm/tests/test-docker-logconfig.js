@@ -101,6 +101,7 @@ test('both options together', function (t) {
     var res = translate({'max-file': '3', 'max-size': '30m'});
 
     t.deepEqual(res, {
+        absent: [],
         errors: [],
         zlog_max_size: 30000000,
         zlog_keep_rotated: 2
@@ -109,9 +110,15 @@ test('both options together', function (t) {
     t.end();
 });
 
-test('missing options produce no settings', function (t) {
-    t.deepEqual(translate({}), {errors: []}, 'empty object');
-    t.deepEqual(translate({'labels': 'a'}), {errors: []}, 'unrelated opt');
+test('missing options produce no settings and are reported', function (t) {
+    var both = {absent: ['zlog_max_size', 'zlog_keep_rotated'], errors: []};
+
+    t.deepEqual(translate({}), both, 'empty object');
+    t.deepEqual(translate({'labels': 'a'}), both, 'unrelated opt');
+    t.deepEqual(translate({'max-file': 'abc'}).absent, ['zlog_max_size'],
+        'invalid option is not absent');
+    t.equal(zlogFromLogConfig('nope').absent, undefined,
+        'no absent list for invalid JSON');
 
     t.end();
 });
@@ -177,7 +184,8 @@ test('valid option survives an invalid sibling', function (t) {
 test('malformed logconfig never throws', function (t) {
     [
         '', 'not json', '{', '"3"', '3', 'null', '[]', '["max-file"]',
-        'true', '{"max-file":"3"', '{"__proto__":{"max-file":"3"}}'
+        'true', '{"max-file":"3"', '{"__proto__":{"max-file":"3"}}',
+        '{"constructor":{"max-file":"3"}}'
     ].forEach(function (s) {
         var res;
 
@@ -189,6 +197,134 @@ test('malformed logconfig never throws', function (t) {
         t.equal(res.zlog_max_size, undefined,
             'no max_size for ' + JSON.stringify(s));
     });
+
+    t.end();
+});
+
+test('options next to a hostile hasOwnProperty key', function (t) {
+    var res;
+
+    t.doesNotThrow(function () {
+        res = zlogFromLogConfig('{"hasOwnProperty":1,"max-file":"3"}');
+    }, 'no throw');
+    t.equal(res.zlog_keep_rotated, 2, 'max-file still read');
+    t.deepEqual(res.absent, ['zlog_max_size'], 'max-size absent');
+
+    t.end();
+});
+
+/*
+ * zlogPropsForPayload
+ */
+
+var zlogPropsForPayload = dockerLogConfig.zlogPropsForPayload;
+var VMOBJ_BOTH = {docker: true, zlog_max_size: 2000000, zlog_keep_rotated: 1};
+
+test('payload: create derives both', function (t) {
+    var res = zlogPropsForPayload({docker: true, internal_metadata: {
+        'docker:logconfig': '{"max-file":"3","max-size":"30m"}'
+    }}, null, 'json-file');
+
+    t.deepEqual(res, {props: {zlog_max_size: 30000000, zlog_keep_rotated: 2},
+        errors: []}, 'derived');
+
+    t.end();
+});
+
+test('payload: nothing for non-docker or other drivers', function (t) {
+    var md = {'docker:logconfig': '{"max-file":"3"}'};
+
+    t.deepEqual(zlogPropsForPayload({internal_metadata: md}, null,
+        'json-file').props, {}, 'not docker');
+    t.deepEqual(zlogPropsForPayload({docker: true, internal_metadata: md},
+        null, 'syslog').props, {}, 'syslog');
+    t.deepEqual(zlogPropsForPayload({docker: true}, null, 'json-file').props,
+        {}, 'no logconfig');
+
+    t.end();
+});
+
+test('payload: explicit properties win', function (t) {
+    var res = zlogPropsForPayload({zlog_keep_rotated: 7,
+        set_internal_metadata: {'docker:logconfig': '{"max-file":"3"}'}},
+        VMOBJ_BOTH, 'json-file');
+
+    t.deepEqual(res.props, {zlog_max_size: 0},
+        'keep_rotated explicit; absent max-size cleared');
+
+    t.end();
+});
+
+test('payload: option dropped from logconfig clears it', function (t) {
+    var res = zlogPropsForPayload({set_internal_metadata: {
+        'docker:logconfig': '{"max-size":"50m"}'
+    }}, VMOBJ_BOTH, 'json-file');
+
+    t.deepEqual(res.props, {zlog_max_size: 50000000, zlog_keep_rotated: 0},
+        'max-file dropped');
+
+    res = zlogPropsForPayload({set_internal_metadata: {
+        'docker:logconfig': '{"max-size":"50m"}'
+    }}, {docker: true, zlog_max_size: 1}, 'json-file');
+    t.deepEqual(res.props, {zlog_max_size: 50000000},
+        'nothing to clear when VM lacks the property');
+
+    t.end();
+});
+
+test('payload: removed logconfig clears both', function (t) {
+    var res = zlogPropsForPayload({
+        remove_internal_metadata: ['docker:logconfig']
+    }, VMOBJ_BOTH, 'json-file');
+
+    t.deepEqual(res.props, {zlog_max_size: 0, zlog_keep_rotated: 0},
+        'cleared');
+
+    res = zlogPropsForPayload({remove_internal_metadata: ['docker:tty']},
+        VMOBJ_BOTH, 'json-file');
+    t.deepEqual(res.props, {}, 'other key removed: unchanged');
+
+    t.end();
+});
+
+test('payload: invalid input leaves properties unchanged', function (t) {
+    ['nope', '[]', '{"max-file":"abc","max-size":"x"}'].forEach(function (c) {
+        var res = zlogPropsForPayload({set_internal_metadata: {
+            'docker:logconfig': c
+        }}, VMOBJ_BOTH, 'json-file');
+
+        t.deepEqual(res.props, {}, 'unchanged for ' + JSON.stringify(c));
+        t.ok(res.errors.length > 0, 'errors for ' + JSON.stringify(c));
+    });
+
+    t.deepEqual(zlogPropsForPayload({set_internal_metadata: {
+        'docker:logconfig': 3
+    }}, VMOBJ_BOTH, 'json-file').props, {}, 'non-string logconfig');
+
+    t.end();
+});
+
+test('payload: hostile hasOwnProperty keys never throw', function (t) {
+    var md = {'hasOwnProperty': 1, 'docker:logconfig': '{"max-file":"3"}'};
+    var res;
+
+    t.doesNotThrow(function () {
+        res = zlogPropsForPayload({hasOwnProperty: 1, docker: true,
+            set_internal_metadata: md}, {hasOwnProperty: 1, docker: true,
+            zlog_max_size: 5}, 'json-file');
+    }, 'no throw');
+    t.deepEqual(res.props, {zlog_keep_rotated: 2, zlog_max_size: 0},
+        'derived');
+
+    t.end();
+});
+
+test('payload: docker:true in the same update counts', function (t) {
+    var res = zlogPropsForPayload({docker: true, set_internal_metadata: {
+        'docker:logconfig': '{"max-file":"2"}'
+    }}, {docker: false}, 'json-file');
+
+    t.deepEqual(res.props, {zlog_keep_rotated: 1}, 'derived');
 
     t.end();
 });

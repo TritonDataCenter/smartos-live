@@ -2329,10 +2329,11 @@ tab-complete UUIDs rather than having to type them out for every command.
         For a docker zone using the json-file log driver, a create or update
         payload that sets internal_metadata 'docker:logconfig' also sets this
         property from its 'max-size' option (k, m and g are powers of 1000),
-        unless the same payload sets zlog_max_size.
+        unless the same payload sets zlog_max_size. See zlog_keep_rotated for
+        how invalid, removed and missing options are handled.
 
         type: integer (size in bytes)
-        vmtype: ANY
+        vmtype: OS
         listable: no
         create: yes
         update: yes
@@ -2350,13 +2351,16 @@ tab-complete UUIDs rather than having to type them out for every command.
         payload that sets internal_metadata 'docker:logconfig' also sets this
         property from its 'max-file' option, unless the same payload sets
         zlog_keep_rotated. docker counts the live log in max-file, so the
-        value is max-file - 1, at least 1 and at most 1000. Invalid options
-        are logged and ignored. To apply this to an existing zone, update
-        'docker:logconfig' (setting it to its current value is enough) and
-        reboot the zone.
+        value is max-file - 1, at least 1 and at most 1000, so max-file=1
+        keeps one rotated log. Invalid options, or a 'docker:logconfig' that
+        is not a JSON object, are logged and leave the property unchanged.
+        An update that sets 'docker:logconfig' without the option, or removes
+        'docker:logconfig', removes the property. To apply this to an
+        existing zone, update 'docker:logconfig' (setting it to its current
+        value is enough) and reboot the zone.
 
         type: integer (0 - 1000)
-        vmtype: ANY
+        vmtype: OS
         listable: no
         create: yes
         update: yes

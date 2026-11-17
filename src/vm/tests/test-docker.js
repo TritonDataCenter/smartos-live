@@ -1405,7 +1405,40 @@ test('test docker:logconfig update sets zlog properties', function (t) {
         updateLogConfig(t, state, 'not json'),
         checkZlogProps(t, state,
             {zlog_max_size: 2000000, zlog_keep_rotated: 1},
-            'invalid JSON leaves values unchanged')
+            'invalid JSON leaves values unchanged'),
+        updateLogConfig(t, state, '{"max-size":"50m"}'),
+        checkZlogProps(t, state, {zlog_max_size: 50000000},
+            'max-file dropped clears zlog_keep_rotated'),
+        function _removeLogConfig(cb) {
+            VM.update(state.uuid, {
+                remove_internal_metadata: ['docker:logconfig']
+            }, function (err) {
+                t.ok(!err, 'Remove docker:logconfig'
+                    + (err ? ': ' + err.message : ''));
+                cb(err);
+            });
+        },
+        checkZlogProps(t, state, {}, 'removed docker:logconfig clears all')
+    ]);
+});
+
+test('test zlog properties set to 0 on a VM without them', function (t) {
+    var payload = JSON.parse(JSON.stringify(common_payload));
+    var state = {brand: payload.brand};
+
+    payload.docker = true;
+
+    vmtest.on_new_vm(t, image_uuid, payload, state, [
+        function _zeroUpdate(cb) {
+            VM.update(state.uuid, {zlog_keep_rotated: 0, zlog_max_size: 0},
+                function (err) {
+
+                t.ok(!err, 'Update to 0 is a no-op'
+                    + (err ? ': ' + err.message : ''));
+                cb(err);
+            });
+        },
+        checkZlogProps(t, state, {}, 'still unset')
     ]);
 });
 

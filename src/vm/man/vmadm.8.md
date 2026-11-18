@@ -2335,7 +2335,9 @@ tab-complete UUIDs rather than having to type them out for every command.
         property from its 'max-size' option (k, m and g are powers of 1000),
         unless the same payload sets zlog_max_size. A missing 'max-size'
         option, or removal of 'docker:logconfig', leaves an existing
-        zlog_max_size unchanged. See zlog_keep_rotated for how invalid
+        zlog_max_size unchanged. Switching the log driver to json-file without
+        a new logconfig applies a valid stored max-size; if it is absent, the
+        existing size cap remains. See zlog_keep_rotated for how invalid
         options are handled.
 
         type: integer (size in bytes)

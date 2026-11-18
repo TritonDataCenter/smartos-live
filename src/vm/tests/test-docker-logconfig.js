@@ -395,6 +395,28 @@ test('payload: switching to json-file applies default retention',
     t.end();
 });
 
+test('payload: switching to json-file applies stored max-size', function (t) {
+    var vmobj = {docker: true, internal_metadata: {
+        'docker:logdriver': 'none',
+        'docker:logconfig': '{"max-size":"30m","max-file":"3"}'
+    }};
+    var payload = {set_internal_metadata: {
+        'docker:logdriver': 'json-file'
+    }};
+    var res = zlogPropsForPayload(payload, vmobj, 'json-file');
+
+    t.deepEqual(res.props, {zlog_max_size: 30000000,
+        zlog_keep_rotated: 2}, 'stored options apply without existing limits');
+
+    vmobj.zlog_max_size = 50000000;
+    vmobj.zlog_keep_rotated = 3;
+    res = zlogPropsForPayload(payload, vmobj, 'json-file');
+    t.deepEqual(res.props, {zlog_max_size: 30000000},
+        'stored size applies while existing positive retention remains');
+
+    t.end();
+});
+
 test('payload: invalid input leaves properties unchanged', function (t) {
     ['nope', '[]', '{"max-file":"abc","max-size":"x"}'].forEach(function (c) {
         var res = zlogPropsForPayload({set_internal_metadata: {

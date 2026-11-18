@@ -53,6 +53,8 @@ test('max-size units are powers of 1000', function (t) {
         ['1000', 1000],
         ['30k', 30000],
         ['30m', 30000000],
+        ['030m', 30000000],
+        ['00030m', 30000000],
         ['2g', 2000000000],
         [5, 5]
     ].forEach(function (tc) {
@@ -70,9 +72,12 @@ test('max-file maps to max-file - 1, clamped to [1, 1000]', function (t) {
         ['1', 1],
         ['2', 1],
         ['3', 2],
+        ['03', 2],
+        ['0000000000000003', 2],
         ['1000', 999],
         ['1001', 1000],
         ['999999999', 1000],
+        ['9999999999', 1000],
         [4, 3]
     ].forEach(function (tc) {
         var res = translate({'max-file': tc[0]});
@@ -125,8 +130,8 @@ test('missing options produce no settings and are reported', function (t) {
 
 test('invalid option values are ignored and reported', function (t) {
     [
-        '0', '-1', '+3', '03', ' 3', '3 ', '3.5', '1e3', '0x10', '', 'abc',
-        '3m;rm -rf /', '3\n', '30mb', '30M', '9999999999'
+        '0', '000', '-1', '+3', ' 3', '3 ', '3.5', '1e3', '0x10', '',
+        'abc', '3m;rm -rf /', '3\n', '30mb', '30M'
     ].forEach(function (v) {
         var res = translate({'max-file': v});
 
@@ -136,7 +141,7 @@ test('invalid option values are ignored and reported', function (t) {
     });
 
     [
-        '0', '0m', '-1m', '1.5m', '1e9', '30M', '30mb', '30 m', 'm', '',
+        '0', '0m', '000m', '-1m', '1.5m', '1e9', '30M', '30mb', '30 m', 'm', '',
         '1t', '9999999999999999', '9999999999999g', '1m"; set foo="bar'
     ].forEach(function (v) {
         var res = translate({'max-size': v});
@@ -239,7 +244,7 @@ test('payload: nothing for non-docker or other drivers', function (t) {
     t.deepEqual(zlogPropsForPayload({docker: true, internal_metadata: md},
         null, 'syslog').props, {}, 'syslog');
     t.deepEqual(zlogPropsForPayload({docker: true}, null, 'json-file').props,
-        {}, 'no logconfig');
+        {zlog_keep_rotated: 1}, 'default json-file retention');
 
     t.end();
 });
@@ -249,41 +254,144 @@ test('payload: explicit properties win', function (t) {
         set_internal_metadata: {'docker:logconfig': '{"max-file":"3"}'}},
         VMOBJ_BOTH, 'json-file');
 
-    t.deepEqual(res.props, {zlog_max_size: 0},
-        'keep_rotated explicit; absent max-size cleared');
+    t.deepEqual(res.props, {},
+        'keep_rotated explicit; absent max-size unchanged');
 
     t.end();
 });
 
-test('payload: option dropped from logconfig clears it', function (t) {
+test('payload: option dropped from logconfig keeps bounded retention',
+    function (t) {
     var res = zlogPropsForPayload({set_internal_metadata: {
         'docker:logconfig': '{"max-size":"50m"}'
     }}, VMOBJ_BOTH, 'json-file');
 
-    t.deepEqual(res.props, {zlog_max_size: 50000000, zlog_keep_rotated: 0},
-        'max-file dropped');
+    t.deepEqual(res.props, {zlog_max_size: 50000000,
+        zlog_keep_rotated: 1}, 'max-file defaults to one rotated log');
 
     res = zlogPropsForPayload({set_internal_metadata: {
         'docker:logconfig': '{"max-size":"50m"}'
     }}, {docker: true, zlog_max_size: 1}, 'json-file');
-    t.deepEqual(res.props, {zlog_max_size: 50000000},
-        'nothing to clear when VM lacks the property');
+    t.deepEqual(res.props, {zlog_max_size: 50000000,
+        zlog_keep_rotated: 1}, 'default retention when VM lacks the property');
+
+    res = zlogPropsForPayload({set_internal_metadata: {
+        'docker:logconfig': '{"max-file":"3"}'
+    }}, VMOBJ_BOTH, 'json-file');
+    t.deepEqual(res.props, {zlog_keep_rotated: 2},
+        'max-size drop preserves existing size cap');
 
     t.end();
 });
 
-test('payload: removed logconfig clears both', function (t) {
+test('payload: removed logconfig keeps safe settings', function (t) {
     var res = zlogPropsForPayload({
         remove_internal_metadata: ['docker:logconfig']
     }, VMOBJ_BOTH, 'json-file');
 
-    t.deepEqual(res.props, {zlog_max_size: 0, zlog_keep_rotated: 0},
-        'cleared');
+    t.deepEqual(res.props, {zlog_keep_rotated: 1},
+        'default retention and existing size cap preserved');
 
     res = zlogPropsForPayload({remove_internal_metadata: ['docker:tty']},
         VMOBJ_BOTH, 'json-file');
     t.deepEqual(res.props, {}, 'other key removed: unchanged');
 
+    t.end();
+});
+
+test('payload: enabling docker on update gets default retention',
+    function (t) {
+    var res = zlogPropsForPayload({docker: true}, {docker: false},
+        'json-file');
+
+    t.deepEqual(res.props, {zlog_keep_rotated: 1},
+        'existing non-docker VM gets bounded retention');
+
+    res = zlogPropsForPayload({docker: true}, {docker: false,
+        internal_metadata: {'docker:logconfig': '{"max-file":"4"}'}},
+        'json-file');
+    t.deepEqual(res.props, {zlog_keep_rotated: 3},
+        'stored max-file is used when Docker is enabled');
+
+    res = zlogPropsForPayload({docker: true, zlog_keep_rotated: 0},
+        {docker: false}, 'json-file');
+    t.deepEqual(res.props, {}, 'explicit unlimited retention wins');
+    t.end();
+});
+
+test('payload: switching to json-file applies default retention',
+    function (t) {
+    var vmobj = {docker: true, zlog_max_size: 50000000,
+        internal_metadata: {'docker:logdriver': 'none'}};
+    var res = zlogPropsForPayload({set_internal_metadata: {
+        'docker:logdriver': 'json-file'
+    }}, vmobj, 'json-file');
+
+    t.deepEqual(res.props, {zlog_keep_rotated: 1},
+        'driver change without logconfig is bounded');
+
+    res = zlogPropsForPayload({
+        remove_internal_metadata: ['docker:logdriver']
+    }, vmobj, 'json-file');
+    t.deepEqual(res.props, {zlog_keep_rotated: 1},
+        'removing non-json driver restores bounded default');
+
+    vmobj.zlog_keep_rotated = 3;
+    vmobj.internal_metadata['docker:logconfig'] = '{"max-file":"4"}';
+    res = zlogPropsForPayload({set_internal_metadata: {
+        'docker:logdriver': 'json-file'
+    }}, vmobj, 'json-file');
+    t.deepEqual(res.props, {},
+        'driver-only transition preserves positive existing retention');
+
+    delete vmobj.zlog_keep_rotated;
+    res = zlogPropsForPayload({set_internal_metadata: {
+        'docker:logdriver': 'json-file'
+    }}, vmobj, 'json-file');
+    t.deepEqual(res.props, {zlog_keep_rotated: 3},
+        'driver-only transition uses stored max-file');
+
+    vmobj.internal_metadata['docker:logconfig'] = 'not json';
+    res = zlogPropsForPayload({set_internal_metadata: {
+        'docker:logdriver': 'json-file'
+    }}, vmobj, 'json-file');
+    t.deepEqual(res.props, {zlog_keep_rotated: 1},
+        'invalid stored config still has bounded retention');
+
+    vmobj.zlog_keep_rotated = 3;
+    res = zlogPropsForPayload({set_internal_metadata: {
+        'docker:logdriver': 'json-file',
+        'docker:logconfig': 'not json'
+    }}, vmobj, 'json-file');
+    t.deepEqual(res.props, {},
+        'invalid new config preserves positive existing retention');
+
+    res = zlogPropsForPayload({set_internal_metadata: {
+        'docker:logdriver': 'json-file',
+        'docker:logconfig': '{"max-file":"6"}'
+    }}, vmobj, 'json-file');
+    t.deepEqual(res.props, {zlog_keep_rotated: 5},
+        'valid new config replaces existing retention');
+
+    delete vmobj.zlog_keep_rotated;
+    res = zlogPropsForPayload({set_internal_metadata: {
+        'docker:logdriver': 'json-file',
+        'docker:logconfig': 'not json'
+    }}, vmobj, 'json-file');
+    t.deepEqual(res.props, {zlog_keep_rotated: 1},
+        'invalid new config without a cap gets bounded default');
+
+    vmobj = {docker: true, zlog_keep_rotated: 3,
+        internal_metadata: {'docker:logdriver': 'json-file'}};
+    res = zlogPropsForPayload({set_internal_metadata: {
+        'docker:logdriver': 'json-file'
+    }}, vmobj, 'json-file');
+    t.deepEqual(res.props, {}, 'setting current driver preserves retention');
+
+    res = zlogPropsForPayload({
+        remove_internal_metadata: ['docker:logdriver']
+    }, vmobj, 'json-file');
+    t.deepEqual(res.props, {}, 'removing current driver preserves retention');
     t.end();
 });
 
@@ -304,6 +412,21 @@ test('payload: invalid input leaves properties unchanged', function (t) {
     t.end();
 });
 
+test('payload: invalid create logconfig keeps default retention',
+    function (t) {
+    ['not json', '{"max-file":"invalid"}'].forEach(function (config) {
+        var res = zlogPropsForPayload({docker: true,
+            internal_metadata: {'docker:logconfig': config}
+        }, null, 'json-file');
+
+        t.deepEqual(res.props, {zlog_keep_rotated: 1},
+            'default retention for ' + config);
+        t.ok(res.errors.length > 0, 'invalid config reported');
+    });
+
+    t.end();
+});
+
 test('payload: hostile hasOwnProperty keys never throw', function (t) {
     var md = {'hasOwnProperty': 1, 'docker:logconfig': '{"max-file":"3"}'};
     var res;
@@ -313,7 +436,7 @@ test('payload: hostile hasOwnProperty keys never throw', function (t) {
             set_internal_metadata: md}, {hasOwnProperty: 1, docker: true,
             zlog_max_size: 5}, 'json-file');
     }, 'no throw');
-    t.deepEqual(res.props, {zlog_keep_rotated: 2, zlog_max_size: 0},
+    t.deepEqual(res.props, {zlog_keep_rotated: 2},
         'derived');
 
     t.end();
@@ -326,5 +449,26 @@ test('payload: docker:true in the same update counts', function (t) {
 
     t.deepEqual(res.props, {zlog_keep_rotated: 1}, 'derived');
 
+    t.end();
+});
+
+test('payload: create ignores update-only metadata and uses default',
+    function (t) {
+    var res = zlogPropsForPayload({docker: true,
+        set_internal_metadata: {
+            'docker:logconfig': '{"max-file":"3","max-size":"30m"}'
+        }}, null, 'json-file');
+
+    t.deepEqual(res.props, {zlog_keep_rotated: 1},
+        'default retention, no properties from discarded metadata');
+    t.end();
+});
+
+test('payload: update ignores create-only metadata', function (t) {
+    var res = zlogPropsForPayload({internal_metadata: {
+        'docker:logconfig': '{"max-file":"3","max-size":"30m"}'
+    }}, VMOBJ_BOTH, 'json-file');
+
+    t.deepEqual(res.props, {}, 'no properties from discarded metadata');
     t.end();
 });

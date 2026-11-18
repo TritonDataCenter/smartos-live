@@ -346,7 +346,8 @@ test('test adding docker=true on old VM', function (t) {
                     + (err ? err.message : 'success'));
                 cb(err);
             });
-        }, function (cb) {
+        }, checkZlogProps(t, state, {zlog_keep_rotated: 1},
+            'enabling Docker bounds retention'), function (cb) {
             getDockerFlags(t, state, function (err, flags) {
                 t.ok(!err, 'getting flags: ' + (err ? err.message : 'success'));
                 if (err) {
@@ -1390,7 +1391,8 @@ test('test docker:logconfig update sets zlog properties', function (t) {
     payload.docker = true;
 
     vmtest.on_new_vm(t, image_uuid, payload, state, [
-        checkZlogProps(t, state, {}, 'no docker:logconfig'),
+        checkZlogProps(t, state, {zlog_keep_rotated: 1},
+            'default json-file retention'),
         updateLogConfig(t, state, '{"max-file":"4"}'),
         checkZlogProps(t, state, {zlog_keep_rotated: 3},
             'max-file from update'),
@@ -1398,17 +1400,26 @@ test('test docker:logconfig update sets zlog properties', function (t) {
         checkZlogProps(t, state,
             {zlog_max_size: 2000000, zlog_keep_rotated: 1},
             'second update replaces values'),
+        updateLogConfig(t, state, '{"max-file":"03","max-size":"030m"}'),
+        checkZlogProps(t, state,
+            {zlog_max_size: 30000000, zlog_keep_rotated: 2},
+            'leading-zero options are accepted'),
+        updateLogConfig(t, state, '{"max-file":"3"}'),
+        checkZlogProps(t, state,
+            {zlog_max_size: 30000000, zlog_keep_rotated: 2},
+            'missing max-size preserves existing cap'),
         updateLogConfig(t, state, '{"max-file":"0","max-size":"x"}'),
         checkZlogProps(t, state,
-            {zlog_max_size: 2000000, zlog_keep_rotated: 1},
+            {zlog_max_size: 30000000, zlog_keep_rotated: 2},
             'invalid options leave values unchanged'),
         updateLogConfig(t, state, 'not json'),
         checkZlogProps(t, state,
-            {zlog_max_size: 2000000, zlog_keep_rotated: 1},
+            {zlog_max_size: 30000000, zlog_keep_rotated: 2},
             'invalid JSON leaves values unchanged'),
         updateLogConfig(t, state, '{"max-size":"50m"}'),
-        checkZlogProps(t, state, {zlog_max_size: 50000000},
-            'max-file dropped clears zlog_keep_rotated'),
+        checkZlogProps(t, state,
+            {zlog_max_size: 50000000, zlog_keep_rotated: 1},
+            'max-file dropped uses bounded default'),
         function _removeLogConfig(cb) {
             VM.update(state.uuid, {
                 remove_internal_metadata: ['docker:logconfig']
@@ -1418,7 +1429,37 @@ test('test docker:logconfig update sets zlog properties', function (t) {
                 cb(err);
             });
         },
-        checkZlogProps(t, state, {}, 'removed docker:logconfig clears all')
+        checkZlogProps(t, state,
+            {zlog_max_size: 50000000, zlog_keep_rotated: 1},
+            'removed docker:logconfig preserves safe limits')
+    ]);
+});
+
+test('test ignored metadata form does not change docker log driver',
+    function (t) {
+    var payload = JSON.parse(JSON.stringify(common_payload));
+    var state = {brand: payload.brand};
+
+    payload.docker = true;
+    payload.set_internal_metadata = {'docker:logdriver': 'none'};
+
+    vmtest.on_new_vm(t, image_uuid, payload, state, [
+        checkZlogProps(t, state, {zlog_keep_rotated: 1},
+            'create ignores update-only log driver'),
+        function _updateWithWrongForm(cb) {
+            VM.update(state.uuid, {
+                internal_metadata: {'docker:logdriver': 'none'},
+                set_internal_metadata: {
+                    'docker:logconfig': '{"max-file":"3"}'
+                }
+            }, function (err) {
+                t.ok(!err, 'Update with ignored metadata form'
+                    + (err ? ': ' + err.message : ''));
+                cb(err);
+            });
+        },
+        checkZlogProps(t, state, {zlog_keep_rotated: 2},
+            'update ignores create-only log driver')
     ]);
 });
 
@@ -1427,6 +1468,7 @@ test('test zlog properties set to 0 on a VM without them', function (t) {
     var state = {brand: payload.brand};
 
     payload.docker = true;
+    payload.zlog_keep_rotated = 0;
 
     vmtest.on_new_vm(t, image_uuid, payload, state, [
         function _zeroUpdate(cb) {
@@ -1439,6 +1481,28 @@ test('test zlog properties set to 0 on a VM without them', function (t) {
             });
         },
         checkZlogProps(t, state, {}, 'still unset')
+    ]);
+});
+
+test('test null metadata update returns a validation error', function (t) {
+    var payload = JSON.parse(JSON.stringify(common_payload));
+    var state = {brand: payload.brand};
+
+    payload.docker = true;
+
+    vmtest.on_new_vm(t, image_uuid, payload, state, [
+        function _invalidMetadata(cb) {
+            VM.update(state.uuid, {set_internal_metadata: null},
+                function (err) {
+
+                t.ok(err, 'null metadata rejected through callback');
+                if (err) {
+                    t.ok(err.message.indexOf('set_internal_metadata') !== -1,
+                        'error identifies set_internal_metadata');
+                }
+                cb();
+            });
+        }
     ]);
 });
 
@@ -1456,6 +1520,44 @@ test('test docker:logconfig ignored for non json-file driver',
 
     vmtest.on_new_vm(t, image_uuid, payload, state, [
         checkZlogProps(t, state, {}, 'logdriver none')
+    ]);
+});
+
+test('test docker driver round trip preserves and restores retention',
+    function (t) {
+    var payload = JSON.parse(JSON.stringify(common_payload));
+    var state = {brand: payload.brand};
+
+    payload.docker = true;
+    payload.zlog_keep_rotated = 5;
+    payload.internal_metadata = {
+        'docker:logdriver': 'none',
+        'docker:logconfig': '{"max-file":"4"}'
+    };
+
+    vmtest.on_new_vm(t, image_uuid, payload, state, [
+        checkZlogProps(t, state, {zlog_keep_rotated: 5},
+            'explicit retention with non-json driver'),
+        function _enableJsonFile(cb) {
+            VM.update(state.uuid, {set_internal_metadata: {
+                'docker:logdriver': 'json-file'
+            }}, cb);
+        },
+        checkZlogProps(t, state, {zlog_keep_rotated: 5},
+            'driver-only update preserves positive retention'),
+        function _disableJsonFile(cb) {
+            VM.update(state.uuid, {set_internal_metadata: {
+                'docker:logdriver': 'none'
+            }, zlog_keep_rotated: 0}, cb);
+        },
+        checkZlogProps(t, state, {}, 'explicit zero removes retention'),
+        function _restoreJsonFile(cb) {
+            VM.update(state.uuid, {set_internal_metadata: {
+                'docker:logdriver': 'json-file'
+            }}, cb);
+        },
+        checkZlogProps(t, state, {zlog_keep_rotated: 3},
+            'stored max-file restores bounded retention')
     ]);
 });
 

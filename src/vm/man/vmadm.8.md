@@ -2326,11 +2326,14 @@ tab-complete UUIDs rather than having to type them out for every command.
         This property is used to set/show the maximum size for a docker zone's
         stdio.log file before zoneadmd(8) will rotate it.
 
-        For a docker zone using the json-file log driver, a create or update
-        payload that sets internal_metadata 'docker:logconfig' also sets this
+        For a docker zone using the json-file log driver, a create payload
+        that sets 'docker:logconfig' in internal_metadata, or an update
+        payload that sets it in set_internal_metadata, also sets this
         property from its 'max-size' option (k, m and g are powers of 1000),
-        unless the same payload sets zlog_max_size. See zlog_keep_rotated for
-        how invalid, removed and missing options are handled.
+        unless the same payload sets zlog_max_size. A missing 'max-size'
+        option, or removal of 'docker:logconfig', leaves an existing
+        zlog_max_size unchanged. See zlog_keep_rotated for how invalid
+        options are handled.
 
         type: integer (size in bytes)
         vmtype: OS
@@ -2347,24 +2350,33 @@ tab-complete UUIDs rather than having to type them out for every command.
         removes the property. Changes take effect the next time the zone
         boots.
 
-        For a docker zone using the json-file log driver, a create or update
-        payload that sets internal_metadata 'docker:logconfig' also sets this
-        property from its 'max-file' option, unless the same payload sets
-        zlog_keep_rotated. docker counts the live log in max-file, so the
-        value is max-file - 1, at least 1 and at most 1000, so max-file=1
-        keeps one rotated log. Invalid options, or a 'docker:logconfig' that
-        is not a JSON object, are logged and leave the property unchanged.
-        An update that sets 'docker:logconfig' without the option, or removes
-        'docker:logconfig', removes the property. To apply this to an
-        existing zone, update 'docker:logconfig' (setting it to its current
-        value is enough) and reboot the zone.
+        For a docker zone using the json-file log driver, vmadm sets this
+        property from the 'max-file' option in 'docker:logconfig', unless
+        the same payload sets zlog_keep_rotated. A missing 'max-file' option
+        on create or in a changed logconfig, or removal of the logconfig,
+        uses the smallest bounded value, 1. When enabling docker on an
+        existing zone or switching its log driver to json-file without a new
+        logconfig, vmadm preserves a positive existing value; otherwise it
+        uses a valid stored max-file, then defaults to 1. An unrelated update
+        leaves the property unchanged. docker counts the live log in max-file,
+        so the derived value is max-file - 1, at least 1 and at most 1000. For
+        max-file=1, zoneadmd keeps one rotated log plus the live log (two
+        files total), whereas Docker keeps only the live log. This is the
+        smallest bounded retention zoneadmd supports; 0 disables pruning.
+        Invalid options, or a 'docker:logconfig' that is not a JSON object,
+        are logged. They leave an existing property unchanged; a new zone
+        still gets the default retention value. A platform upgrade does not
+        retroactively add this property to existing zones. To apply it to an
+        existing json-file docker zone, update 'docker:logconfig' (setting it
+        to its current value is enough) and reboot the zone. The update uses
+        'set_internal_metadata' for 'docker:logconfig'.
 
         type: integer (0 - 1000)
         vmtype: OS
         listable: no
         create: yes
         update: yes
-        default: none (keep all rotated logs)
+        default: 1 when json-file docker logging is first enabled
 
     zlog_mode:
 

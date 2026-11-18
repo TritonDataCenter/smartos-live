@@ -8,7 +8,7 @@
 # bash config.sh -json
 #
 # Copyright 2018 Joyent Inc.
-# Copyright 2025 MNX Cloud, Inc.
+# Copyright 2026 Edgecast Cloud LLC.
 #
 
 CACHE_FILE_JSON="/tmp/.config.json"
@@ -78,9 +78,8 @@ function load_sdc_sysinfo {
     # as we process the sysinfo output.
     #
     tmpfile=$(mktemp -p /tmp)
-    /usr/bin/sysinfo -p | while read -r entry; do
-        lval=$(echo $entry | cut -d= -f 1 | sed -e 's/#//g')
-        rval=$(echo $entry | cut -d= -f 2-)
+    /usr/bin/sysinfo -p | while IFS='=' read -r lval rval; do
+        lval=${lval//\#/}
 
 	# lval must be a bash identifier: a sequence of letters, digits,
 	# or underscores

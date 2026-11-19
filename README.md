@@ -9,6 +9,69 @@ gmake live
 ls output/
 ```
 
+# Building with Nix
+
+This branch can also build SmartOS with [Nix](https://nixos.org), from the
+recipes in [nixpkgs-illumos](https://github.com/TritonDataCenter/nixpkgs-illumos)
+at the commit `nix/nixpkgs-illumos.json` pins: no pkgsrc and no strap cache.
+Whatever has not changed (compilers, illumos-extra, illumos itself) comes from
+a signed binary cache; this checkout's smartos-live is built from source.
+
+1. On a SmartOS host, as root in the global zone, install the Nix zone image:
+
+   ```
+   base=https://us-central.manta.mnx.io/nshalman/public/images/nix-zone-0.4.3
+   uuid=a5c49e64-d162-4775-84ac-d39923e75974
+   curl -O $base/$uuid.imgmanifest -O $base/$uuid.zfs.gz
+   imgadm install -m $uuid.imgmanifest -f $uuid.zfs.gz
+   ```
+
+2. Create a build zone from it. The builder brand gives it the lofi devices
+   and UFS and pcfs mounts the image steps need, and bhyve for booting the
+   result; the zone's Nix uses the binary cache from its first boot.
+
+   ```
+   {
+     "brand": "builder",
+     "image_uuid": "a5c49e64-d162-4775-84ac-d39923e75974",
+     "alias": "nix-build",
+     "hostname": "nix-build",
+     "max_physical_memory": 32768,
+     "max_locked_memory": 32768,
+     "max_swap": 32768,
+     "max_lwps": 20000,
+     "quota": 512,
+     "delegate_dataset": true,
+     "fs_allowed": "ufs,pcfs,tmpfs",
+     "limit_priv": "default,proc_clock_highres,sys_dl_config",
+     "resolvers": ["8.8.8.8", "8.8.4.4"],
+     "nics": [{ "nic_tag": "admin", "ips": ["dhcp"], "primary": true }],
+     "customer_metadata": { "root_authorized_keys": "<your ssh public key>" }
+   }
+   ```
+
+   `vmadm create -f nix-build.json`, then log in as root.
+
+3. In the zone, as root:
+
+   ```
+   git clone -b nix https://github.com/TritonDataCenter/smartos-live.git
+   cd smartos-live
+   tools/build_nix
+   ls /var/tmp/build-smartos
+   ```
+
+   The platform is `platform-<stamp>`, its USB image `platform-<stamp>.usb.gz`
+   and its root password `platform-<stamp>/root.password`.
+
+The build is stamped with this checkout's commit time, so the same commit
+always gets the same stamp. Changes to tracked files are built (and the stamp
+is the time of the build); untracked files are refused, since the build would
+use them but the stamp could not tell. `nix-build -A smartos-live.builderTools`
+gives the tools on their own (`build-image`, `build-usb`, `boot-vm`). To build
+with a checkout of nixpkgs-illumos instead of the pinned commit:
+`NIX_PATH=nixpkgs-illumos=/path/to/nixpkgs-illumos tools/build_nix`.
+
 # Overview
 
 This repository is smartos-live, which builds a SmartOS platform image

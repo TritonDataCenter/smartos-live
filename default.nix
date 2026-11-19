@@ -9,12 +9,17 @@
 # nix/nixpkgs-illumos.json pins; a checkout of it can stand in: -I nixpkgs-illumos=PATH (or NIX_PATH), or
 # --arg nixpkgsIllumos PATH. The platform's gitstatus.json names the commit the recipes are: the pin's, or the
 # checkout's own.
+#
+# illumos: a checkout of illumos-joyent to build in place of the pinned commit (tools/build_nix --illumos DIR, or
+# --arg illumos PATH): its tracked files as they are. A clean checkout at the pinned commit rebuilds nothing; any
+# other runs the nightly and what follows. The build is then stamped with the time of the build.
 let
   pin = builtins.fromJSON (builtins.readFile ./nix/nixpkgs-illumos.json);
   local = builtins.tryEval <nixpkgs-illumos>;
 in
 {
   nixpkgsIllumos ? null,
+  illumos ? null,
 }:
 
 let
@@ -34,6 +39,7 @@ import (recipes + "/smartos.nix") (
   {
     smartosLiveCheckout = ./.;
   }
+  // (if illumos != null then { illumosCheckout = illumos; } else { })
   // (
     if pinned then
       {

@@ -1,13 +1,25 @@
 #!/usr/bin/env bash
 #
-# build_nix [--flavor default|debug] [OUTPUT-DIR]: a SmartOS platform and its USB image from this checkout, built with
-# Nix (../default.nix), as root in a Nix build zone (a builder-brand zone from the nix-zone image, with lofi, UFS and
-# pcfs mounts). nixpkgs-illumos' build-smartos does the work; see it for what is made where (OUTPUT-DIR defaults to
-# /var/tmp/build-smartos) and how the build is stamped. A checkout of nixpkgs-illumos can stand in for the pinned one:
+# build_nix [--flavor default|debug] [--illumos DIR] [OUTPUT-DIR]: a SmartOS platform and its USB image from this
+# checkout, built with Nix (../default.nix), as root in a Nix build zone (a builder-brand zone from the nix-zone image,
+# with lofi, UFS and pcfs mounts). nixpkgs-illumos' build-smartos does the work; see it for what is made where
+# (OUTPUT-DIR defaults to /var/tmp/build-smartos) and how the build is stamped. --illumos DIR builds the illumos-joyent
+# checkout DIR in place of the pinned commit. A checkout of nixpkgs-illumos can stand in for the pinned one:
 # NIX_PATH=nixpkgs-illumos=PATH.
 
 set -euo pipefail
 
 top="$(cd "$(dirname "$0")/.." && pwd)"
+args=()
+while [ $# -gt 0 ]; do
+    case $1 in
+        --illumos)
+            [ $# -ge 2 ] || { echo "build_nix: --illumos needs a directory" >&2; exit 2; }
+            dir=$(cd "$2" && pwd) || exit 2
+            args+=(--arg illumos "$dir")
+            shift 2 ;;
+        *) args+=("$1"); shift ;;
+    esac
+done
 recipes=$(nix eval --raw -f "$top/default.nix" nixpkgs-illumos)
-exec bash "$recipes/build-smartos" --pkgs "$top/default.nix" --checkout "$top" "$@"
+exec bash "$recipes/build-smartos" --pkgs "$top/default.nix" --checkout "$top" ${args[@]+"${args[@]}"}

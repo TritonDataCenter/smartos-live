@@ -72,6 +72,13 @@ gives the tools on their own (`build-image`, `build-usb`, `boot-vm`). To build
 with a checkout of nixpkgs-illumos instead of the pinned commit:
 `NIX_PATH=nixpkgs-illumos=/path/to/nixpkgs-illumos tools/build_nix`.
 
+To build your own illumos-joyent, `tools/build_nix --illumos /path/to/illumos-joyent`
+builds that checkout's tracked files as they are, in place of the pinned commit.
+A clean checkout at the pinned commit rebuilds nothing; any other change runs
+the illumos nightly and everything built after it, from scratch (Nix does not
+reuse a previous build of the tree; for that, see Incremental Development
+below). Such a build is stamped with the time of the build.
+
 # Overview
 
 This repository is smartos-live, which builds a SmartOS platform image

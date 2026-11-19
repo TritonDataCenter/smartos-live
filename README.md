@@ -79,6 +79,16 @@ the illumos nightly and everything built after it, from scratch (Nix does not
 reuse a previous build of the tree; for that, see Incremental Development
 below). Such a build is stamped with the time of the build.
 
+By default the zone's Nix builds one package at a time, each with every CPU
+the zone sees, much as `gmake world` builds illumos-extra one directory at a
+time. Nix can also build packages that do not depend on each other at once.
+For one run, `NIX_CONFIG="max-jobs = 4" tools/build_nix`; for every build in
+the zone, add `max-jobs = 4` to `/etc/nix/nix.local.conf` and
+`svcadm restart nix-daemon` (which stops builds in progress). Each of those
+builds still uses every CPU, so a wider run needs more memory: four at once
+have been run in zones of 128 GB and 72 CPUs. In a zone with a CPU cap, Nix
+does not see the cap; set `cores` to the zone's share as well.
+
 # Overview
 
 This repository is smartos-live, which builds a SmartOS platform image

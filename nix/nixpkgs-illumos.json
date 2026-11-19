@@ -1,6 +1,7 @@
 {
   "owner": "TritonDataCenter",
   "repo": "nixpkgs-illumos",
-  "rev": "a6a254c314bd306537a350339df17de125755e62",
-  "sha256": "1lxpz05hs2cshpdsmmcpgpdj81v4i9x6dajqw2a8g5cz923273pv"
+  "rev": "432283b7b53fde56eb9fc1e129b0a6f6b9a2006e",
+  "date": 1795119281,
+  "sha256": "1vgkc4zn7d0sgbi1r3rfw8g5g85ps8bl7kx6mjfzmp26rzal7kn7"
 }

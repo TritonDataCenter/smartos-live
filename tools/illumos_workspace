@@ -9,8 +9,9 @@
 #   bldenv [COMMAND] COMMAND under bldenv illumos.sh (an interactive shell without one), e.g. `dmake install` in
 #                    usr/src/cmd/ls after a nightly
 #   nightly          `dmake setup`, the tools, and nightly, as tools/build_illumos runs them
-#   image            a platform and its USB image with what the checkout built (tools/build_nix --illumos-proto):
-#                    quick, stamped as dirty, and not a Nix output
+#   image            a platform and its USB image with what the checkout built (tools/build_nix --illumos-proto, or
+#                    --proto once tools/src_workspace has made proto a whole proto area): quick, stamped as dirty, and
+#                    not a Nix output
 #
 # DIR is the checkout, projects/illumos by default (where configure puts it); the proto area is this checkout's
 # proto, as gmake world's. MAX_JOBS defaults to tools/optimize_jobs'. In a Nix build zone, as root.
@@ -29,6 +30,10 @@ shift $((OPTIND - 1))
 [ $# -ge 1 ] || { echo "usage: $0 [-d DIR] env | bldenv [COMMAND] | nightly | image [OUTPUT-DIR]" >&2; exit 2; }
 if [ "$1" = image ]; then
     shift
+    # proto with illumos-extra in it (tools/src_workspace) is a whole proto area, src built in place too
+    if [ -e "$top/proto/.nix-extra" ]; then
+        exec "$top/tools/build_nix" --proto "$top/proto" "$@"
+    fi
     exec "$top/tools/build_nix" --illumos-proto "$top/proto" "$@"
 fi
 if [ ! -d "$dir" ]; then

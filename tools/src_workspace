@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+#
+# src_workspace proto | build | image [OUTPUT-DIR]: build this checkout's src (and man) incrementally, in place, with
+# the Nix build's strap, compiler and tools (../default.nix; nixpkgs-illumos' smartos-live.srcWorkspace) in place of
+# pkgsrc and the strap cache, the way `gmake world` builds them into proto. Nothing of the checkout is copied into
+# the Nix store.
+#
+#   proto   fill proto as src reads it: the illumos build's proto area (the Nix build's, unless tools/illumos_workspace
+#           built one here), then illumos-extra's packages over it, as 0-extra-stamp installs them
+#   build   proto, then make and make install in src and make install in man, into proto
+#   image   a platform and its USB image with this proto area in place of all but projects/local (tools/build_nix
+#           --proto): quick, stamped as dirty, and not a Nix output
+#
+# MAX_JOBS defaults to tools/optimize_jobs'. src's npm fetches what the node add-ons need, as in any smartos-live
+# build. In a Nix build zone, as root.
+
+set -euo pipefail
+
+top="$(cd "$(dirname "$0")/.." && pwd)"
+usage() { echo "usage: $0 proto | build | image [OUTPUT-DIR]" >&2; exit 2; }
+case ${1:-} in
+    image) shift; exec "$top/tools/build_nix" --proto "$top/proto" "$@" ;;
+    proto | build) [ $# = 1 ] || usage ;;
+    *) usage ;;
+esac
+
+: "${MAX_JOBS:=$("$top/tools/optimize_jobs")}"
+export MAX_JOBS
+workspace=$(nix-build --no-out-link -A smartos-live.srcWorkspace "$top/default.nix")
+exec "$workspace/bin/smartos-src-workspace" "$top" "$1"

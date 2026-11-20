@@ -94,6 +94,16 @@ checkout's builds left in `proto`. The build host's `/usr/bin/perl` needs
 XML::Parser, as for any illumos build; `illumos_workspace` says how to provide
 it if it does not.
 
+This checkout's own `src` (and `man`) builds the same way: `tools/src_workspace
+build` fills `proto` as `gmake world` does (illumos, the Nix build's or what
+`illumos_workspace` built there, and illumos-extra's packages over it) and runs
+`make` and `make install` in `src` into it; run it again after a change to
+rebuild what changed. `tools/src_workspace image` makes a platform with that
+proto area, again quick, stamped with the time it was made and not a Nix
+output. As in any smartos-live build, `src`'s npm fetches what its node
+add-ons need, and its Makefile runs node-gyp with `/opt/local/bin/python2.7`;
+`src_workspace` says how to provide one.
+
 By default the zone's Nix builds one package at a time, each with every CPU
 the zone sees, much as `gmake world` builds illumos-extra one directory at a
 time. Nix can also build packages that do not depend on each other at once.

@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+#
+# illumos_workspace [-d DIR] env | bldenv [COMMAND] | nightly | image [OUTPUT-DIR]: build illumos-joyent incrementally
+# in a checkout of it, with the Nix build's toolchain (../default.nix; nixpkgs-illumos' smartos-illumos.workspace) in
+# place of pkgsrc and the strap cache, the way tools/build_illumos builds projects/illumos. Nothing of the checkout is
+# copied into the Nix store.
+#
+#   env              write DIR/illumos.sh and extract the closed binaries into DIR
+#   bldenv [COMMAND] COMMAND under bldenv illumos.sh (an interactive shell without one), e.g. `dmake install` in
+#                    usr/src/cmd/ls after a nightly
+#   nightly          `dmake setup`, the tools, and nightly, as tools/build_illumos runs them
+#   image            a platform and its USB image with what the checkout built (tools/build_nix --illumos-proto):
+#                    quick, stamped as dirty, and not a Nix output
+#
+# DIR is the checkout, projects/illumos by default (where configure puts it); the proto area is this checkout's
+# proto, as gmake world's. MAX_JOBS defaults to tools/optimize_jobs'. In a Nix build zone, as root.
+
+set -euo pipefail
+
+top="$(cd "$(dirname "$0")/.." && pwd)"
+dir=$top/projects/illumos
+while getopts d: opt; do
+    case $opt in
+        d) dir=$OPTARG ;;
+        *) echo "usage: $0 [-d DIR] env | bldenv [COMMAND] | nightly | image [OUTPUT-DIR]" >&2; exit 2 ;;
+    esac
+done
+shift $((OPTIND - 1))
+[ $# -ge 1 ] || { echo "usage: $0 [-d DIR] env | bldenv [COMMAND] | nightly | image [OUTPUT-DIR]" >&2; exit 2; }
+if [ "$1" = image ]; then
+    shift
+    exec "$top/tools/build_nix" --illumos-proto "$top/proto" "$@"
+fi
+if [ ! -d "$dir" ]; then
+    echo "illumos_workspace: no illumos-joyent checkout at $dir; make one, e.g.:" >&2
+    echo "  git clone https://github.com/TritonDataCenter/illumos-joyent.git $dir" >&2
+    exit 1
+fi
+
+: "${MAX_JOBS:=$("$top/tools/optimize_jobs")}"
+export MAX_JOBS
+workspace=$(nix-build --no-out-link -A smartos-illumos.workspace "$top/default.nix")
+exec "$workspace/bin/illumos-workspace" "$dir" "$top/proto" "$@"

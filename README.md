@@ -76,8 +76,23 @@ To build your own illumos-joyent, `tools/build_nix --illumos /path/to/illumos-jo
 builds that checkout's tracked files as they are, in place of the pinned commit.
 A clean checkout at the pinned commit rebuilds nothing; any other change runs
 the illumos nightly and everything built after it, from scratch (Nix does not
-reuse a previous build of the tree; for that, see Incremental Development
-below). Such a build is stamped with the time of the build.
+reuse a previous build of the tree; for that, see the next paragraph). Such a
+build is stamped with the time of the build.
+
+To build illumos-joyent incrementally instead, clone it to `projects/illumos`
+(where `configure` puts it; `-d DIR` names another) and run
+`tools/illumos_workspace nightly`: the illumos nightly in that checkout, as
+`gmake world` runs it, with the Nix build's compiler and tools in place of
+pkgsrc and the strap cache. They come from the binary cache, and nothing of the
+checkout is copied into the Nix store. After a change,
+`tools/illumos_workspace bldenv 'dmake install'` from a directory of the
+checkout rebuilds just that directory (`bldenv` alone gives a shell in the
+build environment), and `tools/illumos_workspace image` makes a platform and
+its USB image with what the checkout built, in a few minutes. Such an image is
+stamped with the time it was made and is not a Nix output: it has whatever the
+checkout's builds left in `proto`. The build host's `/usr/bin/perl` needs
+XML::Parser, as for any illumos build; `illumos_workspace` says how to provide
+it if it does not.
 
 By default the zone's Nix builds one package at a time, each with every CPU
 the zone sees, much as `gmake world` builds illumos-extra one directory at a

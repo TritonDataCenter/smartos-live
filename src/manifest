@@ -476,6 +476,7 @@ f usr/node/0.10/node_modules/fs-ext/package.json 0444 root bin
 f usr/vm/node_modules/bunyan.js 0444 root bin
 f usr/vm/node_modules/diff.js 0644 root root
 f usr/vm/node_modules/dladm.js 0444 root bin
+f usr/vm/node_modules/docker-logconfig.js 0444 root bin
 f usr/vm/node_modules/expander.js 0444 root bin
 f usr/vm/node_modules/fswatcher.js 0444 root root
 f usr/vm/node_modules/hrtime.js 0444 root root

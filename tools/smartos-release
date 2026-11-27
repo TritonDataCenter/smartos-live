@@ -15,9 +15,9 @@
 # This script is run as part of the biweekly SmartOS release process. It
 # uploads the release artifacts from the platform build bits directory to
 # ~~/public/SmartOS/<timestamp>/ , for processing
-# by the https://github.com/joyent/smartos-changelog generator, and uploads
-# the 'latest' release artifacts to ~~/public/SmartOS/*-latest.* to preserve
-# compatibility with scripts that expect to find them there.
+# by the https://github.com/TritonDataCenter/smartos-changelog generator,
+# and uploads the 'latest' release artifacts to ~~/public/SmartOS/*-latest.*
+# to preserve compatibility with scripts that expect to find them there.
 #
 
 # Update the SmartOS release directory

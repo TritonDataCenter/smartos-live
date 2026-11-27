@@ -2,7 +2,7 @@
     "jrVersion": 1,
     "description": "SmartOS platform public repositories",
     "repoCandidateSearch": {
-        "description": "public github.com/joyent repos directly relevant to development of SmartOS",
+        "description": "public github.com/TritonDataCenter repos directly relevant to development of SmartOS",
         "type": "public",
         "includeArchived": false
     },

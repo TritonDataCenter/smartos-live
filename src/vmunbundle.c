@@ -267,18 +267,22 @@ get_header(int fd, header_t *header, int fallback_to_raw)
              * handles the case where you just pipe raw JSON to vmadm receive.
              *
              */
+            size_t chunk_size = data_size;
             fprintf(stderr, "No magic! Dumping raw JSON.\n");
             (void) write_bytes(1, data, data_size);
             while ((nread = read_bytes(fd, (char *)data,
                 VMBUNDLE_HEADER_SIZE)) > 0) {
 
                 fprintf(stderr, "got %d bytes\n", nread);
+                chunk_size += nread;
                 (void) write_bytes(1, data, nread);
             }
             if (nread < 0) {
                 fprintf(stderr, "Error %d reading raw data\n", nread);
                 return (-1);
             }
+            fprintf(stderr, "Name: [JSON]\n");
+            fprintf(stderr, "Size: %zu\n", chunk_size);
             return (-2);
         } else {
             fprintf(stderr, "No magic!\n");
